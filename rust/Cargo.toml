@@ -1,0 +1,52 @@
+[package]
+name = "bitsage-sdk"
+version = "0.1.0"
+edition = "2021"
+description = "BitSage Network SDK - Client library for interacting with BitSage distributed compute network"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/Bitsage-Network/bitsage-sdk"
+keywords = ["bitsage", "zkml", "distributed-compute", "starknet"]
+categories = ["api-bindings", "cryptography"]
+
+[dependencies]
+# HTTP client
+reqwest = { version = "0.11", features = ["json", "stream"] }
+
+# Async runtime
+tokio = { version = "1.0", features = ["full"] }
+tokio-stream = "0.1"
+futures = "0.3"
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Starknet integration
+starknet = "0.11"
+starknet-crypto = "0.6"
+
+# Error handling
+thiserror = "1.0"
+anyhow = "1.0"
+
+# Utilities
+uuid = { version = "1.0", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+url = "2.5"
+hex = "0.4"
+
+# Logging
+tracing = "0.1"
+
+[dev-dependencies]
+tokio-test = "0.4"
+mockito = "1.0"
+
+[features]
+default = []
+# Enable WebSocket support for real-time updates
+websocket = ["tokio-tungstenite"]
+
+[dependencies.tokio-tungstenite]
+version = "0.21"
+optional = true
