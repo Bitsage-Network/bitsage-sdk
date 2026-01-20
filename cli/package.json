@@ -1,0 +1,72 @@
+{
+  "name": "@bitsagecli/cli",
+  "version": "0.1.0",
+  "description": "BitSage Network CLI - One-command deployment for workers, validators, and stakers",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "bitsage": "./bin/bitsage"
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs --dts --clean",
+    "dev": "tsup src/index.ts --format cjs --dts --watch",
+    "start": "node dist/index.js",
+    "lint": "eslint src/",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "bitsage",
+    "cli",
+    "starknet",
+    "gpu",
+    "worker",
+    "validator",
+    "zkml",
+    "distributed-compute"
+  ],
+  "author": "BitSage Network",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Bitsage-Network/bitsage-network"
+  },
+  "homepage": "https://bitsage.network",
+  "bugs": {
+    "url": "https://github.com/Bitsage-Network/bitsage-network/issues"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@bitsagecli/sdk": "^0.1.0",
+    "chalk": "^5.3.0",
+    "commander": "^12.1.0",
+    "conf": "^12.0.0",
+    "inquirer": "^9.2.12",
+    "ora": "^8.0.1",
+    "starknet": "^6.0.0",
+    "@toml-tools/parser": "^1.0.0",
+    "node-fetch": "^3.3.2",
+    "tar": "^7.0.0"
+  },
+  "devDependencies": {
+    "@types/inquirer": "^9.0.7",
+    "@types/node": "^20.0.0",
+    "@types/tar": "^6.1.11",
+    "eslint": "^8.0.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.0.0",
+    "vitest": "^1.0.0"
+  },
+  "files": [
+    "dist",
+    "bin",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  }
+}

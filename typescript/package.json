@@ -1,11 +1,31 @@
 {
   "name": "@bitsage/sdk",
-  "version": "0.1.0",
-  "description": "BitSage Network SDK - Client library for interacting with BitSage distributed compute network",
+  "version": "0.2.0",
+  "description": "BitSage Network SDK - Client library for distributed compute, privacy swaps, and Obelysk encryption",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./privacy": {
+      "types": "./dist/privacy/index.d.ts",
+      "import": "./dist/privacy/index.mjs",
+      "require": "./dist/privacy/index.js"
+    },
+    "./react": {
+      "types": "./dist/react/index.d.ts",
+      "import": "./dist/react/index.mjs",
+      "require": "./dist/react/index.js"
+    }
+  },
   "license": "MIT",
+  "bin": {
+    "bitsage-demo": "./bin/bitsage-demo.ts"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/Bitsage-Network/bitsage-sdk"
@@ -15,21 +35,40 @@
     "zkml",
     "distributed-compute",
     "starknet",
-    "web3"
+    "web3",
+    "react",
+    "elgamal",
+    "privacy",
+    "obelysk",
+    "stwo",
+    "zero-knowledge"
   ],
   "scripts": {
-    "build": "tsup src/index.ts --format cjs,esm --dts",
-    "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
+    "build": "tsup src/index.ts src/privacy/index.ts src/react/index.ts --format cjs,esm --dts",
+    "dev": "tsup src/index.ts src/privacy/index.ts src/react/index.ts --format cjs,esm --dts --watch",
     "lint": "eslint src/",
     "test": "vitest",
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
     "starknet": "^6.0.0"
   },
+  "peerDependencies": {
+    "react": ">=18.0.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    }
+  },
   "devDependencies": {
     "@types/node": "^20.0.0",
+    "@types/react": "^18.0.0",
+    "@vitest/coverage-v8": "^1.0.0",
     "eslint": "^8.0.0",
+    "react": "^18.0.0",
     "tsup": "^8.0.0",
     "typescript": "^5.0.0",
     "vitest": "^1.0.0"
@@ -40,5 +79,13 @@
   "files": [
     "dist",
     "README.md"
-  ]
+  ],
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "homepage": "https://bitsage.network",
+  "bugs": {
+    "url": "https://github.com/Bitsage-Network/bitsage-network/issues"
+  }
 }
