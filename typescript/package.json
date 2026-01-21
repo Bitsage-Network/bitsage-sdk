@@ -1,6 +1,6 @@
 {
   "name": "@bitsage/sdk",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "BitSage Network SDK - Client library for distributed compute, privacy swaps, and Obelysk encryption",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -41,7 +41,12 @@
     "privacy",
     "obelysk",
     "stwo",
-    "zero-knowledge"
+    "zero-knowledge",
+    "gpu",
+    "cuda",
+    "h100",
+    "proof-generation",
+    "zk-proofs"
   ],
   "scripts": {
     "build": "tsup src/index.ts src/privacy/index.ts src/react/index.ts --format cjs,esm --dts",
