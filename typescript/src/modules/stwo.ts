@@ -789,6 +789,124 @@ export class StwoClient {
 
     return { valid: true };
   }
+
+  // =========================================================================
+  // ZKML On-Chain Verification
+  // =========================================================================
+
+  private zkmlVerifierAddress?: string;
+
+  /**
+   * Set the ZKML verifier contract address.
+   * Must be called before any ZKML on-chain operations.
+   */
+  setZkmlVerifier(address: string): void {
+    this.zkmlVerifierAddress = address;
+  }
+
+  private requireZkmlVerifier(): string {
+    if (!this.zkmlVerifierAddress) {
+      throw new Error('ZKML verifier not configured — call setZkmlVerifier() first');
+    }
+    return this.zkmlVerifierAddress;
+  }
+
+  /**
+   * Register a model on-chain (register_model on the unified verifier).
+   */
+  async registerZkmlModel(
+    modelId: string,
+    weightCommitment: string
+  ): Promise<TransactionResult> {
+    const addr = this.requireZkmlVerifier();
+    return this.contract.invokeAndWait(addr, 'register_model', [
+      modelId,
+      weightCommitment,
+    ]);
+  }
+
+  /**
+   * Submit proof calldata for on-chain verification (verify_model).
+   */
+  async verifyZkmlModel(
+    modelId: string,
+    calldata: string[]
+  ): Promise<TransactionResult> {
+    const addr = this.requireZkmlVerifier();
+    return this.contract.invokeAndWait(addr, 'verify_model', [
+      modelId,
+      toFelt(calldata.length),
+      ...calldata,
+    ]);
+  }
+
+  /**
+   * Upload a proof chunk for large proofs that exceed single-tx limits.
+   */
+  async uploadProofChunk(
+    sessionId: string,
+    chunkIndex: number,
+    data: string[]
+  ): Promise<TransactionResult> {
+    const addr = this.requireZkmlVerifier();
+    return this.contract.invokeAndWait(addr, 'upload_proof_chunk', [
+      sessionId,
+      toFelt(chunkIndex),
+      toFelt(data.length),
+      ...data,
+    ]);
+  }
+
+  /**
+   * Read the weight commitment for a registered model.
+   */
+  async getZkmlModelCommitment(modelId: string): Promise<string | null> {
+    const addr = this.requireZkmlVerifier();
+    try {
+      const result = await this.contract.call(addr, 'get_model_commitment', [modelId]);
+      return result?.[0] ?? null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Get the verification count for a model.
+   */
+  async getZkmlVerificationCount(modelId: string): Promise<number> {
+    const addr = this.requireZkmlVerifier();
+    try {
+      const result = await this.contract.call(addr, 'get_verification_count', [modelId]);
+      return Number(result?.[0] ?? '0');
+    } catch {
+      return 0;
+    }
+  }
+
+  /**
+   * Check if a specific proof hash has been verified on-chain.
+   */
+  async isZkmlProofVerified(proofHash: string): Promise<boolean> {
+    const addr = this.requireZkmlVerifier();
+    try {
+      const result = await this.contract.call(addr, 'is_proof_verified', [proofHash]);
+      return result?.[0] === '0x1' || result?.[0] === '1';
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * End-to-end: prove via API, then submit on-chain.
+   */
+  async proveAndVerifyOnChain(
+    proverClient: { proveZkml: (req: any, opts?: any) => Promise<any> },
+    req: { modelId: string; input?: number[]; gpu?: boolean; security?: string },
+    opts?: { pollIntervalMs?: number; timeoutMs?: number }
+  ): Promise<TransactionResult> {
+    const proof = await proverClient.proveZkml(req, opts);
+    return this.verifyZkmlModel(req.modelId, proof.calldata);
+  }
 }
 
 /**

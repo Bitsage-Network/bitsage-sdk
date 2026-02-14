@@ -13,10 +13,18 @@ import {
   createHealthCommand,
   createEarningsCommand,
   createJobsCommand,
+  createLoginCommand,
+  createLogoutCommand,
+  createRunCommand,
+  createTrainCommand,
+  createInferCommand,
+  createConnectCommand,
+  createStartCommand,
+  createStopCommand,
 } from './commands/index.js';
 import { ensureConfigDir } from './lib/config.js';
 
-const VERSION = '0.1.0';
+const VERSION = '0.2.0';
 
 const BANNER = `
 ${chalk.cyan('╔═════════════════════════════════════════════════════════════════╗')}
@@ -56,7 +64,7 @@ async function main() {
 
   program
     .name('bitsage')
-    .description('BitSage Network CLI - One-command deployment for workers, validators, and stakers')
+    .description('BitSage Network CLI - Decentralized GPU compute')
     .version(VERSION, '-v, --version', 'Show version number')
     .option('-d, --debug', 'Enable debug output')
     .hook('preAction', (thisCommand) => {
@@ -65,13 +73,29 @@ async function main() {
       }
     });
 
-  // Add commands
+  // ── Auth ──────────────────────────────────────────────────────────────
+  program.addCommand(createLoginCommand());
+  program.addCommand(createLogoutCommand());
+
+  // ── Quick Actions (top-level shortcuts) ──────────────────────────────
+  program.addCommand(createStartCommand());
+  program.addCommand(createStopCommand());
+
+  // ── GPU Consumer Commands ────────────────────────────────────────────
+  program.addCommand(createRunCommand());
+  program.addCommand(createTrainCommand());
+  program.addCommand(createInferCommand());
+  program.addCommand(createConnectCommand());
+
+  // ── Setup & Management ───────────────────────────────────────────────
   program.addCommand(createInitCommand());
   program.addCommand(createWalletCommand());
   program.addCommand(createWorkerCommand());
   program.addCommand(createFaucetCommand());
   program.addCommand(createStakeCommand());
   program.addCommand(createClaimCommand());
+
+  // ── Monitoring ───────────────────────────────────────────────────────
   program.addCommand(createStatusCommand());
   program.addCommand(createHealthCommand());
   program.addCommand(createEarningsCommand());
@@ -83,36 +107,51 @@ async function main() {
   // Custom help for empty command
   if (process.argv.length === 2) {
     console.log(BANNER);
-    console.log(chalk.bold('Quick Start:'));
+
+    console.log(chalk.bold('GPU Operator (earn SAGE):'));
     console.log();
-    console.log('  1. Initialize your node:');
-    console.log(chalk.cyan('     bitsage init worker'));
+    console.log(chalk.cyan('  bitsage login'));
+    console.log(chalk.cyan('  bitsage start'));
+    console.log(chalk.gray('  That\'s it. Your GPU is earning.'));
     console.log();
-    console.log('  2. Get testnet tokens:');
-    console.log(chalk.cyan('     bitsage faucet claim'));
+
+    console.log(chalk.bold('GPU Consumer (use GPUs):'));
     console.log();
-    console.log('  3. Stake tokens:');
-    console.log(chalk.cyan('     bitsage stake deposit 1000'));
+    console.log(chalk.cyan('  bitsage login'));
+    console.log(chalk.cyan('  bitsage train --model llama-3.1-8b --dataset ./data/'));
+    console.log(chalk.cyan('  bitsage run train.py --gpu h100'));
+    console.log(chalk.cyan('  bitsage infer --model qwen-14b --input "Hello"'));
     console.log();
-    console.log('  4. Start earning:');
-    console.log(chalk.cyan('     bitsage worker start'));
+
+    console.log(chalk.bold('All Commands:'));
     console.log();
-    console.log(chalk.bold('Common Commands:'));
+    console.log('  Auth:');
+    console.log('    login                    Authenticate with BitSage');
+    console.log('    logout                   Clear credentials');
     console.log();
-    console.log('  bitsage init [mode]      Setup wizard (worker/validator/staker)');
-    console.log('  bitsage wallet create    Create a new wallet');
-    console.log('  bitsage wallet balance   Check your balance');
-    console.log('  bitsage faucet claim     Get testnet tokens');
-    console.log('  bitsage stake deposit    Stake SAGE tokens');
-    console.log('  bitsage worker start     Start the worker node');
-    console.log('  bitsage status           Show overall status');
-    console.log('  bitsage earnings         View your earnings');
+    console.log('  Operator:');
+    console.log('    start                    One-command GPU operator setup');
+    console.log('    stop                     Stop the worker daemon');
+    console.log('    status                   Dashboard overview');
+    console.log('    earnings                 View your earnings');
     console.log();
-    console.log('Run', chalk.cyan('bitsage --help'), 'for all commands');
+    console.log('  Consumer:');
+    console.log('    run <script>             Run a script on remote GPU');
+    console.log('    train                    Submit a training job');
+    console.log('    infer                    Run model inference');
+    console.log('    connect <job-id>         Connect to a running job');
+    console.log('    jobs                     List your jobs');
+    console.log();
+    console.log('  Setup:');
+    console.log('    init [mode]              Setup wizard');
+    console.log('    wallet create|balance    Wallet management');
+    console.log('    faucet claim             Get testnet tokens');
+    console.log('    stake deposit <amount>   Stake SAGE tokens');
+    console.log('    worker register|start    Worker management');
+    console.log();
     console.log('Run', chalk.cyan('bitsage <command> --help'), 'for command details');
     console.log();
-    console.log(chalk.gray('Documentation: https://docs.bitsage.network'));
-    console.log(chalk.gray('Support: https://discord.gg/bitsage'));
+    console.log(chalk.gray('Docs: https://docs.bitsage.network  •  Discord: https://discord.gg/bitsage'));
     console.log();
     return;
   }

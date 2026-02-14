@@ -52,6 +52,8 @@ pub mod jobs;
 pub mod proofs;
 pub mod types;
 pub mod workers;
+pub mod zkml;
+pub mod zkml_types;
 
 // Re-export main types
 pub use client::{
@@ -66,3 +68,9 @@ pub use types::{
     ProofVerificationStatus, StakeInfo, WorkerCapabilities, WorkerId, WorkerInfo, WorkerStatus,
 };
 pub use workers::WorkersClient;
+pub use zkml::{ZkmlProverClient, ZkmlProverConfig, ZkmlVerifierClient, ZkmlVerifierConfig};
+pub use zkml_types::{
+    HealthResponse as ZkmlHealthResponse, LoadModelRequest as ZkmlLoadModelRequest,
+    ModelInfoResponse as ZkmlModelInfoResponse, ProveResultResponse as ZkmlProveResultResponse,
+    ProveStatusResponse as ZkmlProveStatusResponse, ZkmlJobStatus, ZkmlProveRequest,
+};

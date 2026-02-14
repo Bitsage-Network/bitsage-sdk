@@ -242,4 +242,10 @@ export type {
   BatchProofResponse,
   ProverMetrics as StwoProverMetrics,
   ProofCostEstimate,
+  ZkmlLoadModelRequest,
+  ZkmlModelInfo,
+  ZkmlProveRequest,
+  ZkmlJobStatus,
+  ZkmlProveStatus,
+  ZkmlProveResult,
 } from './stwo-prover';

@@ -262,6 +262,29 @@ export class StwoProverClient {
   // ---------------------------------------------------------------------------
 
   /**
+   * Load an ONNX model on the prover server.
+   * Must be called before submitting proving jobs for that model.
+   */
+  async loadModel(request: {
+    modelPath: string;
+    description?: string;
+  }): Promise<ZkmlModelInfo> {
+    const response = await this.fetch('/api/v1/models', {
+      method: 'POST',
+      body: JSON.stringify({
+        model_path: request.modelPath,
+        description: request.description,
+      }),
+    });
+    return {
+      modelId: response.model_id,
+      weightCommitment: response.weight_commitment,
+      numLayers: response.num_layers,
+      inputShape: response.input_shape,
+    };
+  }
+
+  /**
    * Submit a proof generation job to the GPU network
    */
   async submitProofJob(request: ProofJobRequest): Promise<ProofJobResponse> {
@@ -279,7 +302,7 @@ export class StwoProverClient {
       metadata: request.metadata,
     };
 
-    const response = await this.fetch('/api/v1/proofs/generate', {
+    const response = await this.fetch('/api/v1/prove', {
       method: 'POST',
       body: JSON.stringify(body),
     });
@@ -305,7 +328,7 @@ export class StwoProverClient {
    * Get the current status of a proof generation job
    */
   async getJobStatus(jobId: string): Promise<ProofGenerationStatus> {
-    const response = await this.fetch(`/api/v1/proofs/${jobId}/status`);
+    const response = await this.fetch(`/api/v1/prove/${jobId}`);
 
     return {
       jobId: response.job_id,
@@ -324,7 +347,7 @@ export class StwoProverClient {
    * Get the completed proof result
    */
   async getProofResult(jobId: string): Promise<ProofResult> {
-    const response = await this.fetch(`/api/v1/proofs/${jobId}/result`);
+    const response = await this.fetch(`/api/v1/prove/${jobId}/result`);
 
     return {
       jobId: response.job_id,
@@ -348,13 +371,23 @@ export class StwoProverClient {
   }
 
   /**
-   * Cancel a pending proof job
+   * Cancel a pending proof job.
+   *
+   * @experimental prove-server does not currently implement a cancel endpoint.
+   * This method is provided for forward-compatibility with the coordinator API.
    */
   async cancelJob(jobId: string): Promise<boolean> {
-    const response = await this.fetch(`/api/v1/proofs/${jobId}`, {
-      method: 'DELETE',
-    });
-    return response.cancelled === true;
+    try {
+      const response = await this.fetch(`/api/v1/prove/${jobId}/cancel`, {
+        method: 'POST',
+      });
+      return response.cancelled === true;
+    } catch {
+      throw new Error(
+        'Cancel is not supported by the current prove-server. ' +
+        'This method will work with a future coordinator API.'
+      );
+    }
   }
 
   /**
@@ -400,7 +433,9 @@ export class StwoProverClient {
   // ---------------------------------------------------------------------------
 
   /**
-   * Submit multiple proofs as a batch (with optional aggregation)
+   * Submit multiple proofs as a batch (with optional aggregation).
+   *
+   * @experimental Not supported by prove-server. Requires coordinator API.
    */
   async submitBatch(request: BatchProofRequest): Promise<BatchProofResponse> {
     const body = {
@@ -497,7 +532,9 @@ export class StwoProverClient {
   // ---------------------------------------------------------------------------
 
   /**
-   * Estimate cost before submitting a job
+   * Estimate cost before submitting a job.
+   *
+   * @experimental Not supported by prove-server. Requires coordinator API.
    */
   async estimateCost(request: ProofJobRequest): Promise<ProofCostEstimate> {
     const body = {
@@ -568,7 +605,9 @@ export class StwoProverClient {
   // ---------------------------------------------------------------------------
 
   /**
-   * Get current network metrics and pricing
+   * Get current network metrics and pricing.
+   *
+   * @experimental Not supported by prove-server. Requires coordinator API.
    */
   async getMetrics(): Promise<ProverMetrics> {
     const response = await this.fetch('/api/v1/proofs/metrics');
@@ -592,7 +631,9 @@ export class StwoProverClient {
   }
 
   /**
-   * Get queue depth for planning
+   * Get queue depth for planning.
+   *
+   * @experimental Not supported by prove-server. Requires coordinator API.
    */
   async getQueueDepth(): Promise<{
     total: number;
@@ -810,6 +851,190 @@ export function createStwoProverClient(
 ): StwoProverClient {
   return new StwoProverClient(config);
 }
+
+// =============================================================================
+// ZKML TYPES
+// =============================================================================
+
+export interface ZkmlLoadModelRequest {
+  /** Path to ONNX model on the prover server filesystem */
+  modelPath: string;
+  /** Optional description for on-chain registration */
+  description?: string;
+}
+
+export interface ZkmlModelInfo {
+  /** Model identifier (hex) */
+  modelId: string;
+  /** Poseidon hash of weight matrices (hex) */
+  weightCommitment: string;
+  /** Number of model layers */
+  numLayers: number;
+  /** Input shape [rows, cols] */
+  inputShape: [number, number];
+}
+
+export interface ZkmlProveRequest {
+  /** Model ID (must be loaded first) */
+  modelId: string;
+  /** Flat array of f32 input values (optional — random if omitted) */
+  input?: number[];
+  /** Use GPU acceleration */
+  gpu?: boolean;
+  /** Security level: "auto" | "tee" | "zk-only" */
+  security?: string;
+}
+
+export type ZkmlJobStatus = 'queued' | 'proving' | 'completed' | 'failed';
+
+export interface ZkmlProveStatus {
+  /** Job identifier */
+  jobId: string;
+  /** Current status */
+  status: ZkmlJobStatus;
+  /** Progress in basis points (0-10000) */
+  progressBps: number;
+  /** Elapsed seconds since submission */
+  elapsedSecs: number;
+}
+
+export interface ZkmlProveResult {
+  /** Combined felt252 calldata for on-chain verify_model() */
+  calldata: string[];
+  /** Poseidon(inputs || outputs) */
+  ioCommitment: string;
+  /** Poseidon hash of weight matrices */
+  weightCommitment: string;
+  /** Running Poseidon hash of intermediate layer values */
+  layerChainCommitment: string;
+  /** Estimated gas for on-chain verification */
+  estimatedGas: number;
+  /** Number of matmul sumcheck proofs */
+  numMatmulProofs: number;
+  /** Number of proven layers */
+  numLayers: number;
+  /** Proving time in milliseconds */
+  proveTimeMs: number;
+  /** TEE attestation hash (null if zk-only) */
+  teeAttestationHash: string | null;
+}
+
+// =============================================================================
+// ZKML METHODS ON StwoProverClient
+// =============================================================================
+
+// Extend the class with ZKML methods via module augmentation
+declare module './stwo-prover' {
+  interface StwoProverClient {
+    /** Load an ONNX model on the prover server */
+    loadZkmlModel(req: ZkmlLoadModelRequest): Promise<ZkmlModelInfo>;
+    /** Submit a ZKML proving job (returns immediately with job_id) */
+    submitZkmlProve(req: ZkmlProveRequest): Promise<{ jobId: string; status: ZkmlJobStatus }>;
+    /** Poll status of a ZKML proving job */
+    getZkmlProveStatus(jobId: string): Promise<ZkmlProveStatus>;
+    /** Get the completed proof result */
+    getZkmlProveResult(jobId: string): Promise<ZkmlProveResult>;
+    /** Submit, poll until complete, and return the result */
+    proveZkml(req: ZkmlProveRequest, opts?: {
+      pollIntervalMs?: number;
+      timeoutMs?: number;
+      onProgress?: (status: ZkmlProveStatus) => void;
+    }): Promise<ZkmlProveResult>;
+  }
+}
+
+StwoProverClient.prototype.loadZkmlModel = async function (
+  req: ZkmlLoadModelRequest
+): Promise<ZkmlModelInfo> {
+  const response = await (this as any).fetch('/api/v1/models', {
+    method: 'POST',
+    body: JSON.stringify({
+      model_path: req.modelPath,
+      description: req.description,
+    }),
+  });
+  return {
+    modelId: response.model_id,
+    weightCommitment: response.weight_commitment,
+    numLayers: response.num_layers,
+    inputShape: response.input_shape,
+  };
+};
+
+StwoProverClient.prototype.submitZkmlProve = async function (
+  req: ZkmlProveRequest
+): Promise<{ jobId: string; status: ZkmlJobStatus }> {
+  const response = await (this as any).fetch('/api/v1/prove', {
+    method: 'POST',
+    body: JSON.stringify({
+      model_id: req.modelId,
+      input: req.input,
+      gpu: req.gpu ?? false,
+      security: req.security ?? 'auto',
+    }),
+  });
+  return { jobId: response.job_id, status: response.status };
+};
+
+StwoProverClient.prototype.getZkmlProveStatus = async function (
+  jobId: string
+): Promise<ZkmlProveStatus> {
+  const response = await (this as any).fetch(`/api/v1/prove/${jobId}`);
+  return {
+    jobId: response.job_id,
+    status: response.status,
+    progressBps: response.progress_bps,
+    elapsedSecs: response.elapsed_secs,
+  };
+};
+
+StwoProverClient.prototype.getZkmlProveResult = async function (
+  jobId: string
+): Promise<ZkmlProveResult> {
+  const response = await (this as any).fetch(`/api/v1/prove/${jobId}/result`);
+  return {
+    calldata: response.calldata,
+    ioCommitment: response.io_commitment,
+    weightCommitment: response.weight_commitment,
+    layerChainCommitment: response.layer_chain_commitment,
+    estimatedGas: response.estimated_gas,
+    numMatmulProofs: response.num_matmul_proofs,
+    numLayers: response.num_layers,
+    proveTimeMs: response.prove_time_ms,
+    teeAttestationHash: response.tee_attestation_hash ?? null,
+  };
+};
+
+StwoProverClient.prototype.proveZkml = async function (
+  this: StwoProverClient,
+  req: ZkmlProveRequest,
+  opts?: {
+    pollIntervalMs?: number;
+    timeoutMs?: number;
+    onProgress?: (status: ZkmlProveStatus) => void;
+  }
+): Promise<ZkmlProveResult> {
+  const { jobId } = await this.submitZkmlProve(req);
+  const pollInterval = opts?.pollIntervalMs ?? 2000;
+  const timeout = opts?.timeoutMs ?? 600000; // 10 minutes
+  const startTime = Date.now();
+
+  while (Date.now() - startTime < timeout) {
+    const status = await this.getZkmlProveStatus(jobId);
+    if (opts?.onProgress) opts.onProgress(status);
+
+    if (status.status === 'completed') {
+      return this.getZkmlProveResult(jobId);
+    }
+    if (status.status === 'failed') {
+      throw new Error(`ZKML proving failed for job ${jobId}`);
+    }
+
+    await (this as any).sleep(pollInterval);
+  }
+
+  throw new Error(`ZKML proving timed out after ${timeout}ms`);
+};
 
 // =============================================================================
 // CONVENIENCE EXPORTS

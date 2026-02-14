@@ -3,26 +3,36 @@ BitSage SDK
 
 Official Python SDK for interacting with the BitSage Network.
 
-Example:
+Quick Start (Easy API):
+    >>> import bitsage
+    >>>
+    >>> bitsage.login()  # Uses ~/.bitsage/credentials from CLI
+    >>> output = await bitsage.infer("qwen-14b", "What is ZKML?")
+    >>> print(output)
+
+Full Client:
     >>> from bitsage import BitSageClient, JobType
     >>>
     >>> async def main():
     ...     client = BitSageClient()
-    ...
-    ...     # Submit an AI inference job
     ...     response = await client.submit_job(
     ...         job_type=JobType.ai_inference(model_type="llama-7b", batch_size=1),
     ...         input_data="base64_encoded_data",
     ...         max_cost_sage=100,
     ...     )
-    ...     print(f"Job submitted: {response.job_id}")
-    ...
-    ...     # Wait for completion
     ...     result = await client.wait_for_completion(response.job_id)
-    ...     print(f"Result: {result}")
 """
 
 from bitsage.client import BitSageClient, ClientConfig, WalletConfig
+from bitsage.zkml import ZkmlProverClient, ZkmlVerifierClient
+from bitsage.zkml_types import (
+    ZkmlJobStatus,
+    ZkmlModelInfo,
+    ZkmlProveRequest,
+    ZkmlProveStatus,
+    ZkmlProveResult,
+    ZkmlHealthResponse,
+)
 from bitsage.types import (
     JobId,
     WorkerId,
@@ -46,12 +56,40 @@ from bitsage.types import (
     FaucetClaimResponse,
 )
 
-__version__ = "0.1.0"
+# Easy API — top-level convenience functions
+from bitsage.easy import (
+    login,
+    train,
+    run,
+    infer,
+    workers,
+    status as network_status,
+    JobHandle,
+)
+
+__version__ = "0.2.0"
 __all__ = [
+    # Easy API (top-level convenience)
+    "login",
+    "train",
+    "run",
+    "infer",
+    "workers",
+    "network_status",
+    "JobHandle",
     # Client
     "BitSageClient",
     "ClientConfig",
     "WalletConfig",
+    # ZKML
+    "ZkmlProverClient",
+    "ZkmlVerifierClient",
+    "ZkmlJobStatus",
+    "ZkmlModelInfo",
+    "ZkmlProveRequest",
+    "ZkmlProveStatus",
+    "ZkmlProveResult",
+    "ZkmlHealthResponse",
     # Types
     "JobId",
     "WorkerId",
