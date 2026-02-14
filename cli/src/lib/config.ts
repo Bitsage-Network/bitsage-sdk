@@ -1,9 +1,16 @@
 import Conf from 'conf';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync, unlinkSync } from 'fs';
 import { homedir } from 'os';
 import { join } from 'path';
 
 export type Network = 'mainnet' | 'sepolia' | 'local';
+
+export interface Credentials {
+  type: 'api_key' | 'wallet';
+  token: string;
+  address?: string;
+  expires_at?: string;
+}
 
 export interface BitsageConfig {
   network: {
@@ -198,6 +205,70 @@ export function isWalletConfigured(): boolean {
 
 export function clearConfig(): void {
   store.clear();
+}
+
+// =========================================================================
+// Credentials Management
+// =========================================================================
+
+const CREDENTIALS_FILE = join(CONFIG_DIR, 'credentials');
+
+export function getCredentials(): Credentials | null {
+  try {
+    if (!existsSync(CREDENTIALS_FILE)) return null;
+    const raw = readFileSync(CREDENTIALS_FILE, 'utf-8');
+    const creds = JSON.parse(raw) as Credentials;
+
+    // Check expiry
+    if (creds.expires_at) {
+      const expiry = new Date(creds.expires_at);
+      if (expiry < new Date()) {
+        return null;
+      }
+    }
+
+    return creds;
+  } catch {
+    return null;
+  }
+}
+
+export function saveCredentials(creds: Credentials): void {
+  ensureConfigDir();
+  writeFileSync(CREDENTIALS_FILE, JSON.stringify(creds, null, 2), { mode: 0o600 });
+}
+
+export function clearCredentials(): void {
+  try {
+    if (existsSync(CREDENTIALS_FILE)) {
+      unlinkSync(CREDENTIALS_FILE);
+    }
+  } catch {
+    // Ignore cleanup errors
+  }
+}
+
+export function isAuthenticated(): boolean {
+  return getCredentials() !== null;
+}
+
+export function getAuthHeaders(): Record<string, string> {
+  const creds = getCredentials();
+  if (!creds) return {};
+
+  if (creds.type === 'api_key') {
+    return { 'Authorization': `Bearer ${creds.token}` };
+  }
+
+  // Wallet-based auth uses a signed token
+  return {
+    'Authorization': `Bearer ${creds.token}`,
+    'X-Wallet-Address': creds.address || '',
+  };
+}
+
+export function getCredentialsFile(): string {
+  return CREDENTIALS_FILE;
 }
 
 // Export for testing

@@ -385,6 +385,94 @@ console.log('STWO Verifier:', contracts.stwoVerifier);
 | `proveInference()` | Helper for AI inference |
 | `proveBridge()` | Helper for bridge proofs |
 | `aggregateProofs()` | Recursive aggregation |
+| `loadZkmlModel(req)` | Load ONNX model on prover server |
+| `submitZkmlProve(req)` | Submit ZKML proving job |
+| `getZkmlProveStatus(jobId)` | Get ZKML job progress |
+| `getZkmlProveResult(jobId)` | Get proof calldata + commitments |
+| `proveZkml(req, opts?)` | Full prove pipeline with progress callback |
+
+### StwoClient (On-Chain Verification)
+
+| Method | Description |
+|--------|-------------|
+| `submitProof(data, hash)` | Submit proof for verification |
+| `verifyProof(hash)` | Verify proof via contract |
+| `submitGpuTeeProof(params)` | Submit GPU-TEE optimistic proof |
+| `registerZkmlModel(id, commitment)` | Register model on verifier contract |
+| `verifyZkmlModel(id, calldata)` | Verify ML model proof on-chain |
+| `isZkmlProofVerified(hash)` | Check if proof is verified |
+| `getZkmlVerificationCount(id)` | Get verification count for model |
+| `getZkmlModelCommitment(id)` | Get registered weight commitment |
+| `proveAndVerifyOnChain(prover, req)` | End-to-end: prove via API + verify on-chain |
+
+---
+
+## ZKML Proving
+
+End-to-end ML inference proving and on-chain verification.
+
+### Prove a Model
+
+```typescript
+import { createStwoProverClient } from '@bitsage/sdk';
+
+const prover = createStwoProverClient({
+  baseUrl: 'http://your-gpu-server:8080',
+});
+
+// Load an ONNX model
+const model = await prover.loadZkmlModel({
+  modelPath: '/path/to/model.onnx',
+  description: 'Qwen3-14B block 0',
+});
+console.log('Model ID:', model.modelId);
+console.log('Weight commitment:', model.weightCommitment);
+
+// Prove with progress tracking
+const result = await prover.proveZkml(
+  { modelId: model.modelId, gpu: true },
+  {
+    onProgress: (status) => {
+      console.log(`${(status.progressBps / 100).toFixed(1)}% — ${status.elapsedSecs.toFixed(1)}s`);
+    },
+    pollIntervalMs: 2000,
+    timeoutMs: 300_000,
+  }
+);
+
+console.log('Calldata:', result.calldataLength, 'felts');
+console.log('Gas estimate:', result.estimatedGas);
+console.log('Prove time:', (result.proveTimeMs / 1000).toFixed(1), 's');
+```
+
+### Verify On-Chain
+
+```typescript
+import { createStwoClient } from '@bitsage/sdk';
+
+const verifier = createStwoClient({ /* ... */ });
+
+// Set verifier contract (default: deployed v3 on Sepolia)
+verifier.setZkmlVerifier('0x048070fbd531a0192f3d4a37eb019ae3174600cae15e08c737982fae5d929160');
+
+// Register model
+await verifier.registerZkmlModel(model.modelId, model.weightCommitment);
+
+// Check verification status
+const count = await verifier.getZkmlVerificationCount(model.modelId);
+console.log('Verified', count, 'times');
+```
+
+### Full Pipeline
+
+```typescript
+// Prove on GPU server + verify on Starknet in one call
+const tx = await verifier.proveAndVerifyOnChain(prover, {
+  modelId: model.modelId,
+  gpu: true,
+});
+console.log('Transaction hash:', tx);
+```
 
 ---
 

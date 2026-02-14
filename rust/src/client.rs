@@ -32,7 +32,8 @@ pub struct ClientConfig {
 impl Default for ClientConfig {
     fn default() -> Self {
         Self {
-            api_url: "https://api.bitsage.network".to_string(),
+            api_url: std::env::var("BITSAGE_API_URL")
+                .unwrap_or_else(|_| "https://api.bitsage.network".to_string()),
             starknet_rpc_url: "https://starknet-sepolia.public.blastapi.io".to_string(),
             timeout: Duration::from_secs(30),
             network: Network::Sepolia,

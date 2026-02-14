@@ -3,6 +3,7 @@ BitSage SDK Client
 """
 
 import asyncio
+import os
 from dataclasses import dataclass, field
 from typing import Optional, AsyncIterator
 from datetime import datetime
@@ -42,10 +43,16 @@ class SdkError(Exception):
 class ClientConfig:
     """Client configuration"""
 
-    api_url: str = "https://api.bitsage.network"
+    api_url: str = ""
     starknet_rpc_url: str = "https://starknet-sepolia.public.blastapi.io"
     timeout: float = 30.0
     network: str = "sepolia"
+
+    def __post_init__(self):
+        if not self.api_url:
+            self.api_url = os.environ.get(
+                "BITSAGE_API_URL", "https://api.bitsage.network"
+            )
 
 
 @dataclass

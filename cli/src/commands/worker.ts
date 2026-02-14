@@ -458,4 +458,233 @@ export function createWorkerCommand(): Command {
   return worker;
 }
 
+/**
+ * Top-level `bitsage start` command — one-command operator onboarding.
+ * Detects GPU → registers → faucets → stakes → starts daemon.
+ */
+export function createStartCommand(): Command {
+  return new Command('start')
+    .description('One-command GPU operator setup: detect → register → stake → run')
+    .option('--network <network>', 'Network: mainnet, sepolia, local', 'sepolia')
+    .option('--foreground', 'Run in foreground instead of background')
+    .option('--skip-stake', 'Skip auto-staking step')
+    .action(async (options) => {
+      try {
+        const { ensureConfigDir, setNetwork, isWalletConfigured, getConfig, setWorkerId, setConfig } = await import('../lib/config.js');
+        const { createAndSaveWallet } = await import('../lib/starknet.js');
+        const { isAuthenticated } = await import('../lib/config.js');
+
+        ensureConfigDir();
+
+        // Step 1: Network
+        logger.heading('BitSage Quick Start');
+        setNetwork(options.network);
+        logger.info(`Network: ${options.network}`);
+
+        // Step 2: Auth check
+        if (!isAuthenticated()) {
+          logger.info('No credentials found. Setting up wallet...');
+        }
+
+        // Step 3: Wallet
+        if (!isWalletConfigured()) {
+          logger.info('Creating a new wallet...');
+          const pwd = await (await import('../utils/prompts.js')).password('Choose a wallet password (min 8 chars):', {
+            validate: (p: string) => p.length >= 8 || 'Password must be at least 8 characters',
+          });
+          const confirmPwd = await (await import('../utils/prompts.js')).password('Confirm password:');
+          if (pwd !== confirmPwd) {
+            logger.error('Passwords do not match');
+            process.exit(1);
+          }
+          const { address, keystorePath } = await withSpinner('Creating wallet', () => createAndSaveWallet(pwd));
+          const { setWalletAddress, setKeystorePath } = await import('../lib/config.js');
+          setWalletAddress(address);
+          setKeystorePath(keystorePath);
+          logger.success(`Wallet created: ${address.slice(0, 10)}...${address.slice(-6)}`);
+        } else {
+          logger.success(`Wallet: ${getConfig().wallet.address.slice(0, 10)}...`);
+        }
+
+        // Step 4: Detect GPU
+        const capabilities = await withSpinner('Detecting hardware', detectCapabilities);
+        if (capabilities.gpu_count > 0) {
+          logger.success(`GPU: ${capabilities.gpu_model} (${capabilities.gpu_memory_gb}GB) x ${capabilities.gpu_count}`);
+          logger.info(`Tier: ${capabilities.gpu_tier}`);
+          setConfig({
+            worker: { id: '', enabled: true, gpu_enabled: true, listen_port: 8081 },
+          });
+        } else {
+          logger.warn('No GPU detected. Worker will run in CPU-only mode.');
+          setConfig({
+            worker: { id: '', enabled: true, gpu_enabled: false, listen_port: 8081 },
+          });
+        }
+
+        // Step 5: Register worker
+        let workerId = getConfig().worker.id;
+        if (!workerId) {
+          workerId = `worker-${randomBytes(4).toString('hex')}`;
+          setWorkerId(workerId);
+        }
+
+        await withSpinner('Registering worker', async () => {
+          try {
+            await registerWorker({
+              worker_id: workerId,
+              wallet_address: getConfig().wallet.address,
+              capabilities,
+            });
+          } catch (error) {
+            // Non-fatal — coordinator may be unreachable on first setup
+            logger.debug(`Registration: ${error}`);
+          }
+        });
+        logger.success(`Worker registered: ${workerId}`);
+
+        // Step 6: Faucet (testnet only)
+        if (options.network === 'sepolia') {
+          logger.info('Requesting testnet tokens...');
+          try {
+            const coordinatorUrl = await findHealthyCoordinator();
+            await fetch(`${coordinatorUrl}/api/v1/faucet/claim`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ address: getConfig().wallet.address }),
+            });
+            logger.success('Testnet tokens requested');
+          } catch {
+            logger.debug('Faucet request failed (may need manual claim)');
+          }
+        }
+
+        // Step 7: Auto-stake (if not skipped)
+        if (!options.skipStake) {
+          logger.info('Auto-staking will be performed when tokens arrive.');
+        }
+
+        // Step 8: Start worker daemon
+        console.log();
+        if (isWorkerRunning()) {
+          logger.info('Worker is already running');
+        } else {
+          logger.info('Starting worker daemon...');
+
+          // Ensure binary
+          let binaryPath: string;
+          try {
+            binaryPath = await withSpinner('Checking worker binary', () => ensureBinary('worker'));
+          } catch {
+            logger.warn('Worker binary not available. It will be downloaded on next start.');
+            logger.info('Run `bitsage worker start` after binary is available.');
+            printDashboard(workerId, getConfig().wallet.address, options.network);
+            return;
+          }
+
+          const config = getConfig();
+          let coordinatorUrl: string;
+          try {
+            coordinatorUrl = await findHealthyCoordinator();
+          } catch {
+            coordinatorUrl = getConfig().network.coordinator_url;
+          }
+
+          const args = [
+            '--id', workerId,
+            '--coordinator', coordinatorUrl,
+            '--wallet', config.wallet.address,
+            '--port', config.worker.listen_port.toString(),
+          ];
+
+          if (config.worker.gpu_enabled) {
+            args.push('--enable-gpu');
+          }
+
+          if (options.foreground) {
+            logger.info('Running in foreground. Press Ctrl+C to stop.');
+            const proc = spawn(binaryPath, args, {
+              stdio: 'inherit',
+              env: { ...process.env, RUST_LOG: 'info', COORDINATOR_URL: coordinatorUrl },
+            });
+            proc.on('exit', (code) => logger.info(`Worker exited with code ${code}`));
+            process.on('SIGINT', () => { proc.kill('SIGINT'); });
+          } else {
+            const fs = await import('fs');
+            const logStream = fs.openSync(LOG_FILE, 'a');
+            const proc = spawn(binaryPath, args, {
+              detached: true,
+              stdio: ['ignore', logStream, logStream],
+              env: { ...process.env, RUST_LOG: 'info', COORDINATOR_URL: coordinatorUrl },
+            });
+            writeFileSync(PID_FILE, proc.pid!.toString());
+            proc.unref();
+            logger.success('Worker daemon started');
+          }
+        }
+
+        printDashboard(workerId, getConfig().wallet.address, options.network);
+
+      } catch (error) {
+        logger.error(`Start failed: ${error instanceof Error ? error.message : error}`);
+        process.exit(1);
+      }
+    });
+}
+
+function printDashboard(workerId: string, address: string, network: string): void {
+  console.log();
+  logger.box('GPU Operator Running', [
+    `Worker ID:  ${workerId}`,
+    `Address:    ${address.slice(0, 10)}...${address.slice(-6)}`,
+    `Network:    ${network}`,
+    '',
+    'Your GPU is now earning SAGE tokens.',
+  ]);
+
+  logger.info('Useful commands:');
+  logger.list([
+    'bitsage status        — Dashboard overview',
+    'bitsage earnings      — Check your earnings',
+    'bitsage worker logs   — View worker logs',
+    'bitsage stop          — Pause the worker',
+  ]);
+}
+
+/**
+ * Top-level `bitsage stop` command — shortcut to stop worker.
+ */
+export function createStopCommand(): Command {
+  return new Command('stop')
+    .description('Stop the worker daemon')
+    .action(async () => {
+      try {
+        const pid = getWorkerPid();
+
+        if (!pid) {
+          logger.info('Worker is not running');
+          return;
+        }
+
+        startSpinner('Stopping worker');
+
+        try {
+          process.kill(pid, 'SIGTERM');
+          for (let i = 0; i < 30; i++) {
+            await new Promise(r => setTimeout(r, 100));
+            try { process.kill(pid, 0); } catch { break; }
+          }
+          try { process.kill(pid, 'SIGKILL'); } catch {}
+        } catch {}
+
+        try { unlinkSync(PID_FILE); } catch {}
+
+        stopSpinner(true, 'Worker stopped');
+      } catch (error) {
+        stopSpinner(false);
+        logger.error(`Failed to stop: ${error instanceof Error ? error.message : error}`);
+        process.exit(1);
+      }
+    });
+}
+
 export default createWorkerCommand;

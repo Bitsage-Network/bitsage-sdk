@@ -266,7 +266,12 @@ impl JobsClient {
             query_params.push(format!("offset={}", offset));
         }
         if let Some(status) = params.status {
-            query_params.push(format!("status={:?}", status));
+            // Use serde serialization for lowercase enum values (e.g., "pending" not "Pending")
+            let status_str = serde_json::to_value(&status)
+                .ok()
+                .and_then(|v| v.as_str().map(|s| s.to_string()))
+                .unwrap_or_else(|| format!("{:?}", status).to_lowercase());
+            query_params.push(format!("status={}", status_str));
         }
 
         if !query_params.is_empty() {
