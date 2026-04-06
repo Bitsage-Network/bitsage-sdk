@@ -122,7 +122,7 @@ function getDefaultWsUrl(network: string): string {
  *
  * @example
  * ```tsx
- * import { BitSageProvider, WebSocketProvider } from '@bitsage/sdk/react';
+ * import { BitSageProvider, WebSocketProvider } from '@obelyzk/sdk/react';
  *
  * function App() {
  *   return (

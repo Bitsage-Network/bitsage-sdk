@@ -12,7 +12,7 @@
  *   useSubmitJob,
  *   useJobStatus,
  *   useNetworkStatsStream,
- * } from '@bitsage/sdk/react';
+ * } from '@obelyzk/sdk/react';
  *
  * function App() {
  *   return (

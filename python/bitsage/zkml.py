@@ -23,7 +23,7 @@ from bitsage.zkml_types import (
 )
 
 # Default prover URL (local prove-server)
-DEFAULT_PROVER_URL = "http://localhost:8080"
+DEFAULT_PROVER_URL = "https://prover.bitsage.network"
 
 # Default StweMlStarkVerifier on Starknet Sepolia
 DEFAULT_VERIFIER_ADDRESS = (

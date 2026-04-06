@@ -86,7 +86,7 @@ const PrivacyContext = createContext<PrivacyContextValue | undefined>(undefined)
  *
  * @example
  * ```tsx
- * import { BitSageProvider, PrivacyProvider } from '@bitsage/sdk/react';
+ * import { BitSageProvider, PrivacyProvider } from '@obelyzk/sdk/react';
  *
  * function App() {
  *   return (

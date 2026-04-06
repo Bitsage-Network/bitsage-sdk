@@ -54,6 +54,7 @@ pub mod types;
 pub mod workers;
 pub mod zkml;
 pub mod zkml_types;
+pub mod firewall;
 
 // Re-export main types
 pub use client::{

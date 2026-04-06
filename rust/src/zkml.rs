@@ -22,13 +22,14 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use reqwest::header::{HeaderMap, HeaderValue, CONTENT_TYPE};
+use serde::Deserialize;
 use tracing::{debug, info};
 
 use crate::error::{SdkError, SdkResult};
 use crate::zkml_types::*;
 
 /// Default prove-server URL.
-const DEFAULT_PROVER_URL: &str = "http://localhost:8080";
+const DEFAULT_PROVER_URL: &str = "https://prover.bitsage.network";
 
 /// Default StweMlStarkVerifier address on Starknet Sepolia.
 const DEFAULT_VERIFIER_ADDRESS: &str =
@@ -446,8 +447,13 @@ impl ZkmlVerifierClient {
 
 /// Compute sn_keccak selector for a function name (matching Starknet's convention).
 fn starknet_keccak(name: &str) -> String {
-    use starknet::core::utils::get_selector_from_name;
-    format!("{:#x}", get_selector_from_name(name).unwrap())
+    use sha3::{Digest, Keccak256};
+    let hash = Keccak256::digest(name.as_bytes());
+    // sn_keccak: take first 250 bits (mask top 6 bits of first byte)
+    let mut bytes = [0u8; 32];
+    bytes.copy_from_slice(&hash);
+    bytes[0] &= 0x03; // mask to 250 bits
+    format!("0x{}", hex::encode(bytes))
 }
 
 #[cfg(test)]

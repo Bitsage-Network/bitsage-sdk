@@ -6,7 +6,7 @@ import {
   MAINNET_CONTRACTS,
   LOCAL_CONTRACTS,
   getContractsForNetwork as sdkGetContracts,
-} from '@bitsage/sdk';
+} from '@obelyzk/sdk';
 
 export { SEPOLIA_CONTRACTS, MAINNET_CONTRACTS, LOCAL_CONTRACTS };
 

@@ -14,3 +14,4 @@ export { createRunCommand } from './run.js';
 export { createTrainCommand } from './train.js';
 export { createInferCommand } from './infer.js';
 export { createConnectCommand } from './connect.js';
+export { createShellCommand } from './shell.js';

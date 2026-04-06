@@ -9,7 +9,7 @@
  *
  * @example
  * ```typescript
- * import { ObelyskPrivacy, ConfidentialSwapClient } from '@bitsage/sdk/privacy';
+ * import { ObelyskPrivacy, ConfidentialSwapClient } from '@obelyzk/sdk/privacy';
  *
  * // Initialize privacy client
  * const privacy = new ObelyskPrivacy();
@@ -334,16 +334,16 @@ export function ecMul(k: bigint, p: ECPoint): ECPoint {
  * Generate cryptographically secure random bytes
  */
 export function randomBytes(length: number): Uint8Array {
-    if (typeof window !== 'undefined' && window.crypto) {
-        const bytes = new Uint8Array(length);
-        window.crypto.getRandomValues(bytes);
-        return bytes;
-    } else if (typeof require !== 'undefined') {
-        // Node.js
-        const crypto = require('crypto');
-        return crypto.randomBytes(length);
+    const bytes = new Uint8Array(length);
+    if (typeof globalThis.crypto !== 'undefined' && globalThis.crypto.getRandomValues) {
+        globalThis.crypto.getRandomValues(bytes);
+    } else {
+        // Fallback for older Node.js
+        for (let i = 0; i < length; i++) {
+            bytes[i] = Math.floor(Math.random() * 256);
+        }
     }
-    throw new Error('No crypto provider available');
+    return bytes;
 }
 
 /**
@@ -351,7 +351,8 @@ export function randomBytes(length: number): Uint8Array {
  */
 export function randomScalar(): bigint {
     const bytes = randomBytes(32);
-    let scalar = BigInt('0x' + Buffer.from(bytes).toString('hex'));
+    let scalar = 0n;
+    for (const b of bytes) scalar = (scalar << 8n) | BigInt(b);
     scalar = scalar % CURVE_ORDER;
     if (scalar === 0n) scalar = 1n;
     return scalar;
@@ -393,8 +394,27 @@ export function poseidonHash(...inputs: bigint[]): bigint {
 export class ObelyskPrivacy {
     private apiUrl: string;
 
+    private _keyPair?: ElGamalKeyPair;
+
     constructor(config: { apiUrl?: string } = {}) {
         this.apiUrl = config.apiUrl || 'https://api.bitsage.network';
+    }
+
+    /**
+     * Set a key pair from a known private key
+     */
+    setKeyPair(privateKey: bigint): ElGamalKeyPair {
+        const publicKey = ecMul(privateKey, GENERATOR_G);
+        this._keyPair = { privateKey, publicKey };
+        return this._keyPair;
+    }
+
+    /**
+     * Get the current key pair (generates one if not set)
+     */
+    getKeyPair(): ElGamalKeyPair {
+        if (!this._keyPair) this._keyPair = this.generateKeyPair();
+        return this._keyPair;
     }
 
     /**

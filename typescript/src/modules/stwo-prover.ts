@@ -11,7 +11,7 @@
  *
  * @example
  * ```typescript
- * import { createStwoProverClient } from '@bitsage/sdk';
+ * import { createStwoProverClient } from '@obelyzk/sdk';
  *
  * const prover = createStwoProverClient({
  *   baseUrl: 'https://prover.bitsage.network',
@@ -61,8 +61,8 @@ export type ProofType =
   | 'custom';
 
 export interface StwoProverConfig {
-  /** Base URL of the STWO prover service */
-  baseUrl: string;
+  /** Base URL of the STWO prover service (default: https://prover.bitsage.network) */
+  baseUrl?: string;
   /** API key for authentication */
   apiKey?: string;
   /** Default GPU tier preference */
@@ -251,10 +251,10 @@ export const DEFAULT_PROVER_CONFIG: Partial<StwoProverConfig> = {
 // =============================================================================
 
 export class StwoProverClient {
-  private config: StwoProverConfig;
+  private config: StwoProverConfig & { baseUrl: string };
 
-  constructor(config: StwoProverConfig) {
-    this.config = { ...DEFAULT_PROVER_CONFIG, ...config };
+  constructor(config?: Partial<StwoProverConfig>) {
+    this.config = { ...DEFAULT_PROVER_CONFIG, ...config } as StwoProverConfig & { baseUrl: string };
   }
 
   // ---------------------------------------------------------------------------
@@ -278,6 +278,7 @@ export class StwoProverClient {
     });
     return {
       modelId: response.model_id,
+      name: response.name || response.model_id,
       weightCommitment: response.weight_commitment,
       numLayers: response.num_layers,
       inputShape: response.input_shape,
@@ -847,9 +848,9 @@ export class StwoProverClient {
  * Create a new STWO Prover Client
  */
 export function createStwoProverClient(
-  config: StwoProverConfig
+  config?: Partial<StwoProverConfig>
 ): StwoProverClient {
-  return new StwoProverClient(config);
+  return new StwoProverClient(config ?? {});
 }
 
 // =============================================================================
@@ -858,7 +859,9 @@ export function createStwoProverClient(
 
 export interface ZkmlLoadModelRequest {
   /** Path to ONNX model on the prover server filesystem */
-  modelPath: string;
+  modelPath?: string;
+  /** Path to HuggingFace model directory on the prover */
+  model_dir?: string;
   /** Optional description for on-chain registration */
   description?: string;
 }
@@ -866,6 +869,8 @@ export interface ZkmlLoadModelRequest {
 export interface ZkmlModelInfo {
   /** Model identifier (hex) */
   modelId: string;
+  /** Human-readable model name (e.g., "smollm2-135m") */
+  name: string;
   /** Poseidon hash of weight matrices (hex) */
   weightCommitment: string;
   /** Number of model layers */
@@ -875,7 +880,7 @@ export interface ZkmlModelInfo {
 }
 
 export interface ZkmlProveRequest {
-  /** Model ID (must be loaded first) */
+  /** Model ID or name (e.g., "smollm2-135m" or "0x1cb4f9...") */
   modelId: string;
   /** Flat array of f32 input values (optional — random if omitted) */
   input?: number[];
@@ -926,7 +931,9 @@ export interface ZkmlProveResult {
 // Extend the class with ZKML methods via module augmentation
 declare module './stwo-prover' {
   interface StwoProverClient {
-    /** Load an ONNX model on the prover server */
+    /** List all loaded models on the prover */
+    listZkmlModels(): Promise<ZkmlModelInfo[]>;
+    /** Load a model on the prover server (ONNX or HuggingFace) */
     loadZkmlModel(req: ZkmlLoadModelRequest): Promise<ZkmlModelInfo>;
     /** Submit a ZKML proving job (returns immediately with job_id) */
     submitZkmlProve(req: ZkmlProveRequest): Promise<{ jobId: string; status: ZkmlJobStatus }>;
@@ -940,21 +947,77 @@ declare module './stwo-prover' {
       timeoutMs?: number;
       onProgress?: (status: ZkmlProveStatus) => void;
     }): Promise<ZkmlProveResult>;
+    /** Full attestation: prove + on-chain verification in one call */
+    attest(req: ZkmlAttestRequest): Promise<ZkmlAttestResult>;
   }
 }
+
+export interface ZkmlAttestRequest {
+  /** Model name or hex ID */
+  modelId: string;
+  /** Flat input array */
+  input: number[];
+  /** GPU acceleration (default: true) */
+  gpu?: boolean;
+  /** Submit on-chain (default: true) */
+  submitOnchain?: boolean;
+}
+
+export interface ZkmlAttestResult {
+  /** Proof identifier */
+  proofId: string;
+  /** IO commitment (Poseidon hash of inputs + outputs) */
+  ioCommitment: string;
+  /** Weight commitment (Poseidon Merkle root of all weights) */
+  weightCommitment: string;
+  /** Number of computation nodes proven */
+  numProvenLayers: number;
+  /** Proof generation time in ms */
+  proveTimeMs: number;
+  /** Number of calldata felts */
+  calldataFelts: number;
+  /** Estimated gas for on-chain verification */
+  estimatedGas: number;
+  /** On-chain verification status */
+  onchain: {
+    submitted: boolean;
+    txHashes: string[];
+    network: string;
+    contract: string;
+    verified: boolean;
+    explorerUrl: string | null;
+    error: string | null;
+  };
+}
+
+/** List all loaded models on the prover. */
+StwoProverClient.prototype.listZkmlModels = async function (): Promise<ZkmlModelInfo[]> {
+  const response = await (this as any).fetch('/api/v1/models');
+  return (response as any[]).map((m: any) => ({
+    modelId: m.model_id,
+    name: m.name || '',
+    weightCommitment: m.weight_commitment,
+    numLayers: m.num_layers,
+    inputShape: m.input_shape,
+  }));
+};
 
 StwoProverClient.prototype.loadZkmlModel = async function (
   req: ZkmlLoadModelRequest
 ): Promise<ZkmlModelInfo> {
-  const response = await (this as any).fetch('/api/v1/models', {
+  // Support both ONNX (model_path) and HuggingFace (model_dir)
+  const endpoint = req.model_dir ? '/api/v1/models/hf' : '/api/v1/models';
+  const body = req.model_dir
+    ? { model_dir: req.model_dir, description: req.description }
+    : { model_path: req.modelPath, description: req.description };
+
+  const response = await (this as any).fetch(endpoint, {
     method: 'POST',
-    body: JSON.stringify({
-      model_path: req.modelPath,
-      description: req.description,
-    }),
+    body: JSON.stringify(body),
   });
   return {
     modelId: response.model_id,
+    name: response.name || '',
     weightCommitment: response.weight_commitment,
     numLayers: response.num_layers,
     inputShape: response.input_shape,
@@ -1034,6 +1097,42 @@ StwoProverClient.prototype.proveZkml = async function (
   }
 
   throw new Error(`ZKML proving timed out after ${timeout}ms`);
+};
+
+/**
+ * Full attestation: prove + on-chain verification in one call.
+ * Returns proof hash, on-chain tx hashes, and verification status.
+ */
+StwoProverClient.prototype.attest = async function (
+  req: ZkmlAttestRequest
+): Promise<ZkmlAttestResult> {
+  const response = await (this as any).fetch('/api/v1/attest', {
+    method: 'POST',
+    body: JSON.stringify({
+      model_id: req.modelId,
+      input: req.input,
+      gpu: req.gpu ?? true,
+      submit_onchain: req.submitOnchain ?? true,
+    }),
+  });
+  return {
+    proofId: response.proof_id,
+    ioCommitment: response.io_commitment,
+    weightCommitment: response.weight_commitment,
+    numProvenLayers: response.num_proven_layers,
+    proveTimeMs: response.prove_time_ms,
+    calldataFelts: response.calldata_felts,
+    estimatedGas: response.estimated_gas,
+    onchain: {
+      submitted: response.onchain?.submitted ?? false,
+      txHashes: response.onchain?.tx_hashes ?? [],
+      network: response.onchain?.network ?? 'starknet-sepolia',
+      contract: response.onchain?.contract ?? '',
+      verified: response.onchain?.verified ?? false,
+      explorerUrl: response.onchain?.explorer_url ?? null,
+      error: response.onchain?.error ?? null,
+    },
+  };
 };
 
 // =============================================================================

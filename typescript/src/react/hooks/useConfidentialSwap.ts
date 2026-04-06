@@ -5,7 +5,7 @@
  *
  * @example
  * ```tsx
- * import { useConfidentialSwap, useConfidentialOrders } from '@bitsage/sdk/react';
+ * import { useConfidentialSwap, useConfidentialOrders } from '@obelyzk/sdk/react';
  *
  * function SwapPage() {
  *   const { client, keyPair, generateKeyPair, isReady } = useConfidentialSwap();

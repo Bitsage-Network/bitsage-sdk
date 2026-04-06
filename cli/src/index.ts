@@ -19,6 +19,7 @@ import {
   createTrainCommand,
   createInferCommand,
   createConnectCommand,
+  createShellCommand,
   createStartCommand,
   createStopCommand,
 } from './commands/index.js';
@@ -82,6 +83,7 @@ async function main() {
   program.addCommand(createStopCommand());
 
   // ── GPU Consumer Commands ────────────────────────────────────────────
+  program.addCommand(createShellCommand());
   program.addCommand(createRunCommand());
   program.addCommand(createTrainCommand());
   program.addCommand(createInferCommand());
@@ -108,17 +110,24 @@ async function main() {
   if (process.argv.length === 2) {
     console.log(BANNER);
 
+    console.log(chalk.bold('Quick Start:'));
+    console.log();
+    console.log(chalk.cyan('  bitsage login'));
+    console.log(chalk.cyan('  bitsage shell'));
+    console.log(chalk.gray('  That\'s it. You\'re on an H100.'));
+    console.log();
+
     console.log(chalk.bold('GPU Operator (earn SAGE):'));
     console.log();
     console.log(chalk.cyan('  bitsage login'));
     console.log(chalk.cyan('  bitsage start'));
-    console.log(chalk.gray('  That\'s it. Your GPU is earning.'));
+    console.log(chalk.gray('  Your GPU is earning.'));
     console.log();
 
     console.log(chalk.bold('GPU Consumer (use GPUs):'));
     console.log();
-    console.log(chalk.cyan('  bitsage login'));
-    console.log(chalk.cyan('  bitsage train --model llama-3.1-8b --dataset ./data/'));
+    console.log(chalk.cyan('  bitsage shell                  SSH into a GPU worker'));
+    console.log(chalk.cyan('  bitsage shell --list           List available workers'));
     console.log(chalk.cyan('  bitsage run train.py --gpu h100'));
     console.log(chalk.cyan('  bitsage infer --model qwen-14b --input "Hello"'));
     console.log();
@@ -129,18 +138,20 @@ async function main() {
     console.log('    login                    Authenticate with BitSage');
     console.log('    logout                   Clear credentials');
     console.log();
-    console.log('  Operator:');
-    console.log('    start                    One-command GPU operator setup');
-    console.log('    stop                     Stop the worker daemon');
-    console.log('    status                   Dashboard overview');
-    console.log('    earnings                 View your earnings');
-    console.log();
-    console.log('  Consumer:');
+    console.log('  GPU Access:');
+    console.log('    shell [worker]           SSH into a GPU worker');
+    console.log('    shell --list             List available workers');
     console.log('    run <script>             Run a script on remote GPU');
     console.log('    train                    Submit a training job');
     console.log('    infer                    Run model inference');
     console.log('    connect <job-id>         Connect to a running job');
     console.log('    jobs                     List your jobs');
+    console.log();
+    console.log('  Operator:');
+    console.log('    start                    One-command GPU operator setup');
+    console.log('    stop                     Stop the worker daemon');
+    console.log('    status                   Dashboard overview');
+    console.log('    earnings                 View your earnings');
     console.log();
     console.log('  Setup:');
     console.log('    init [mode]              Setup wizard');

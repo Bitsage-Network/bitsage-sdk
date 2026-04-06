@@ -3,16 +3,16 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "bitsage-sdk"
+name = "obelyzk"
 version = "0.1.0"
-description = "BitSage Network SDK - Client library for interacting with BitSage distributed compute network"
+description = "ObelyZK SDK — verifiable ML inference on Starknet with recursive STARK proofs"
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.9"
 authors = [
-    { name = "BitSage Network", email = "dev@bitsage.network" }
+    { name = "ObelyZK", email = "dev@obelysk.com" }
 ]
-keywords = ["bitsage", "zkml", "distributed-compute", "starknet", "web3"]
+keywords = ["obelyzk", "zkml", "starknet", "zero-knowledge", "machine-learning", "stark"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -39,12 +39,12 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://bitsage.network"
-Documentation = "https://docs.bitsage.network/sdk/python"
-Repository = "https://github.com/Bitsage-Network/bitsage-sdk"
+Homepage = "https://obelysk.com"
+Documentation = "https://github.com/Bitsage-Network/stwo-ml"
+Repository = "https://github.com/Bitsage-Network/stwo-ml"
 
 [tool.hatch.build.targets.wheel]
-packages = ["bitsage"]
+packages = ["obelyzk", "bitsage"]
 
 [tool.ruff]
 line-length = 100

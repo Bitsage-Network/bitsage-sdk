@@ -139,7 +139,7 @@ function getDefaultRpcUrl(network: Network): string {
  *
  * @example
  * ```tsx
- * import { BitSageProvider } from '@bitsage/sdk/react';
+ * import { BitSageProvider } from '@obelyzk/sdk/react';
  *
  * function App() {
  *   return (

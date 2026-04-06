@@ -10,8 +10,6 @@ use crate::workers::WorkersClient;
 
 use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE};
 use serde::{Deserialize, Serialize};
-use starknet::core::types::FieldElement;
-use starknet::signers::{LocalWallet, SigningKey};
 use std::sync::Arc;
 use std::time::Duration;
 use tracing::{debug, info};
@@ -62,21 +60,26 @@ impl Network {
 /// Wallet configuration for signing transactions
 #[derive(Clone)]
 pub struct WalletConfig {
-    pub private_key: FieldElement,
-    pub account_address: FieldElement,
+    /// Private key as 0x-prefixed hex string
+    pub private_key: String,
+    /// Account address as 0x-prefixed hex string
+    pub account_address: String,
 }
 
 impl WalletConfig {
     /// Create wallet config from hex strings
     pub fn from_hex(private_key: &str, account_address: &str) -> SdkResult<Self> {
-        let private_key = FieldElement::from_hex_be(private_key)
-            .map_err(|e| SdkError::Config(format!("Invalid private key: {}", e)))?;
-        let account_address = FieldElement::from_hex_be(account_address)
-            .map_err(|e| SdkError::Config(format!("Invalid account address: {}", e)))?;
+        // Validate hex format
+        if !private_key.starts_with("0x") {
+            return Err(SdkError::Config("Private key must be 0x-prefixed hex".into()));
+        }
+        if !account_address.starts_with("0x") {
+            return Err(SdkError::Config("Account address must be 0x-prefixed hex".into()));
+        }
 
         Ok(Self {
-            private_key,
-            account_address,
+            private_key: private_key.to_string(),
+            account_address: account_address.to_string(),
         })
     }
 }
@@ -331,7 +334,7 @@ impl BitSageClient {
     ) -> SdkResult<String> {
         let url = format!("{}/api/staking/stake", self.config.api_url);
         let request = StakeRequest {
-            address: format!("{:#x}", wallet.account_address),
+            address: wallet.account_address.clone(),
             amount,
             gpu_tier,
         };
@@ -360,7 +363,7 @@ impl BitSageClient {
     async fn execute_unstake(&self, wallet: &WalletConfig, amount: u64) -> SdkResult<String> {
         let url = format!("{}/api/staking/unstake", self.config.api_url);
         let request = UnstakeRequest {
-            address: format!("{:#x}", wallet.account_address),
+            address: wallet.account_address.clone(),
             amount,
         };
 
@@ -388,7 +391,7 @@ impl BitSageClient {
     async fn execute_claim_rewards(&self, wallet: &WalletConfig) -> SdkResult<u64> {
         let url = format!("{}/api/staking/claim", self.config.api_url);
         let request = ClaimRewardsRequest {
-            address: format!("{:#x}", wallet.account_address),
+            address: wallet.account_address.clone(),
         };
 
         let response = self
@@ -417,7 +420,7 @@ impl BitSageClient {
 
     async fn fetch_stake_info(&self, wallet: &WalletConfig) -> SdkResult<StakeInfo> {
         let url = format!(
-            "{}/api/staking/info/{:#x}",
+            "{}/api/staking/info/{}",
             self.config.api_url, wallet.account_address
         );
 
