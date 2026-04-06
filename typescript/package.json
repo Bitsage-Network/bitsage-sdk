@@ -1,6 +1,6 @@
 {
-  "name": "@bitsage/sdk",
-  "version": "0.3.0",
+  "name": "@obelyzk/sdk",
+  "version": "1.1.0",
   "description": "BitSage Network SDK - Client library for distributed compute, privacy swaps, and Obelysk encryption",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -20,6 +20,16 @@
       "types": "./dist/react/index.d.ts",
       "import": "./dist/react/index.mjs",
       "require": "./dist/react/index.js"
+    },
+    "./firewall": {
+      "types": "./dist/firewall/index.d.ts",
+      "import": "./dist/firewall/index.mjs",
+      "require": "./dist/firewall/index.js"
+    },
+    "./obelysk": {
+      "types": "./dist/obelysk/index.d.ts",
+      "import": "./dist/obelysk/index.mjs",
+      "require": "./dist/obelysk/index.js"
     }
   },
   "license": "MIT",
@@ -49,8 +59,8 @@
     "zk-proofs"
   ],
   "scripts": {
-    "build": "tsup src/index.ts src/privacy/index.ts src/react/index.ts --format cjs,esm --dts",
-    "dev": "tsup src/index.ts src/privacy/index.ts src/react/index.ts --format cjs,esm --dts --watch",
+    "build": "tsup src/index.ts src/privacy/index.ts src/react/index.ts src/obelysk/index.ts --format cjs,esm --dts",
+    "dev": "tsup src/index.ts src/privacy/index.ts src/react/index.ts src/obelysk/index.ts --format cjs,esm --dts --watch",
     "lint": "eslint src/",
     "test": "vitest",
     "test:run": "vitest run",
@@ -92,5 +102,9 @@
   "homepage": "https://bitsage.network",
   "bugs": {
     "url": "https://github.com/Bitsage-Network/bitsage-network/issues"
+  },
+  "optionalDependencies": {
+    "@modelcontextprotocol/sdk": "^1.27.1",
+    "zod": "^4.3.6"
   }
 }

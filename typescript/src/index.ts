@@ -5,7 +5,7 @@
  *
  * @example
  * ```typescript
- * import { BitSageClient } from '@bitsage/sdk';
+ * import { BitSageClient } from '@obelyzk/sdk';
  *
  * const client = new BitSageClient();
  *
@@ -158,6 +158,16 @@ export {
   PROOF_TYPES,
   GPU_TIERS,
 } from './modules';
+
+// Agent Firewall (ZKML guardrails)
+export { AgentFirewallSDK } from './firewall';
+export type {
+  FirewallConfig,
+  TransactionFeatures,
+  ClassifyResult,
+  AgentStatus,
+  Decision,
+} from './firewall';
 
 export type {
   // Mining
