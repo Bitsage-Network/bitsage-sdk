@@ -1,308 +1,132 @@
-# BitSage SDK
+# ObelyZK SDK
 
-Unified SDKs for the BitSage Network — decentralized GPU compute with zero-knowledge proofs on Starknet.
+Unified SDKs for verifiable ML inference on Starknet. Prove any model, verify on-chain in 1 transaction with full OODS + Merkle + FRI + PoW (trustless) verification.
 
-## 30-Second Quick Start
+## Packages
 
-### GPU Operator (earn SAGE)
+| Package | Language | Install | Description |
+|---------|----------|---------|-------------|
+| [@obelyzk/sdk](./typescript/) | TypeScript | `npm install @obelyzk/sdk` | Full-featured prover client with async jobs |
+| [obelyzk](./python/) | Python | `pip install obelyzk` | Pythonic API with sync and async support |
+| [@obelyzk/cli](./cli/) | CLI | `npm install -g @obelyzk/cli` | Command-line proving and submission |
+| @obelyzk/mcp-server | MCP | `npm install @obelyzk/mcp-server` | Claude AI tool integration (40+ tools) |
 
-```bash
-npm install -g @bitsagecli/cli
-bitsage login
-bitsage start
+## API Comparison
+
+| Feature | TypeScript | Python | CLI |
+|---------|-----------|--------|-----|
+| Prove a model | `client.prove({ model, input })` | `client.prove(model, input)` | `obelysk prove --model --input` |
+| List models | `client.getModels()` | `client.models()` | `obelysk models` |
+| Attestation | `client.attest({ model, input })` | `client.attest(model, input)` | `obelysk prove --on-chain` |
+| Async support | Native Promises | `AsyncObelyzkClient` | Background jobs |
+| Job polling | `client.getJob(id)` | `client.job(id)` | `obelysk status --job` |
+| Config | Constructor options | Constructor args | `obelysk config` |
+
+## Quick Start
+
+### TypeScript
+
+```typescript
+import { createProverClient } from "@obelyzk/sdk";
+
+const client = createProverClient();
+const result = await client.prove({
+  model: "smollm2-135m",
+  input: [1.0, 2.0, 3.0],
+  onChain: true,
+});
+
+console.log("Proof TX:", result.txHash);
+console.log("Verified:", result.verified);
 ```
 
-### GPU Consumer (use GPUs)
-
-```bash
-bitsage login
-bitsage train --model llama-3.1-8b --dataset ./data/ --epochs 3
-bitsage infer --model qwen-14b --input "What is ZKML?"
-bitsage run my_script.py --gpu h100
-```
+See the full [TypeScript SDK README](./typescript/README.md) for API reference and examples.
 
 ### Python
 
 ```python
-import bitsage
+from obelyzk import ObelyzkClient
 
-bitsage.login()
-output = await bitsage.infer("qwen-14b", "What is ZKML?")
-job = await bitsage.train(model="llama-3.1-8b", dataset="./data/", epochs=3)
-result = await job.wait()
+client = ObelyzkClient()
+result = client.prove(
+    model="smollm2-135m",
+    input=[1.0, 2.0, 3.0],
+    on_chain=True,
+)
+
+print(f"Proof TX: {result.tx_hash}")
+print(f"Verified: {result.verified}")
 ```
 
-## Available SDKs
+See the full [Python SDK README](./python/README.md) for API reference and async usage.
 
-| Package | Install | Description |
-|---------|---------|-------------|
-| **CLI** | `npm i -g @bitsagecli/cli` | `bitsage login/start/train/run/infer` — full operator + consumer UX |
-| **Python** | `pip install bitsage-sdk` | `bitsage.login()`, `.train()`, `.infer()`, `BitSageClient`, ZKML prover/verifier |
-| **TypeScript** | `npm i @bitsage/sdk` | `StwoProverClient`, React hooks, WebSocket, all modules |
-| **Rust** | `bitsage-sdk = "0.1"` | `ZkmlProverClient`, `ZkmlVerifierClient` |
-| **MCP** | `@bitsage/mcp-server` | 40+ Claude tools for AI agent integration |
-
-## Contract Addresses
-
-Canonical addresses live in [`contracts.json`](./contracts.json).
-The STARK verifier on Sepolia:
-
-```
-0x005928ac548dc2719ef1b34869db2b61c2a55a4b148012fad742262a8d674fba
-```
-
-## CLI (`@bitsagecli/cli`)
-
-The CLI provides a unified, opinionated surface for both GPU operators and consumers.
-
-### Operator Flow
+### CLI
 
 ```bash
-bitsage login                  # Authenticate (browser OAuth, API key, or wallet)
-bitsage start                  # Auto: detect GPU -> register -> stake -> run daemon
+# Install
+npm install -g @obelyzk/cli
 
-bitsage status                 # Dashboard
-bitsage earnings               # Check SAGE earnings
-bitsage stop                   # Pause
+# Prove and verify on-chain
+obelysk prove --model smollm2-135m --input "Hello world" --on-chain
+
+# List available models
+obelysk models
 ```
 
-### Consumer Flow
+See the full [CLI README](./cli/README.md) for all commands and flags.
 
-```bash
-bitsage login
+## How It Works
 
-# Training
-bitsage train --model llama-3.1-8b --dataset ./data/ --epochs 3 --gpu h100
+1. Your SDK call hits the hosted GPU prover at `https://api.obelysk.com`
+2. The prover executes the model over the M31 field and generates a GKR sumcheck proof
+3. A recursive STARK compresses the proof to ~942 felts (constant size, 49x compression)
+4. The proof is verified on Starknet Sepolia in a single transaction using full OODS + Merkle + FRI + PoW (trustless)
 
-# Remote script execution
-bitsage run train.py --gpu a100 --env BATCH_SIZE=32
+## On-Chain Verification
 
-# Inference
-bitsage infer --model qwen-14b --input "Explain ZK proofs"
-echo "prompt" | bitsage infer --model phi-3-mini --stream
+All proofs are verified by the ObelyZK Recursive Verifier contract on Starknet Sepolia:
 
-# Job management
-bitsage jobs
-bitsage connect <job-id>       # Live logs / interactive terminal
-```
+- **Contract:** `0x707819dea6210ab58b358151419a604ffdb16809b568bf6f8933067c2a28715`
+- **Verification:** Full OODS + Merkle + FRI + PoW (trustless)
+- **Network:** Starknet Sepolia
+- **Felts:** ~942 per proof
+- **Compression:** 49x vs raw GKR data
+- **Cost:** ~$0.02 per verification
 
-### All Commands
+## Supported Models
 
-| Category | Command | Description |
-|----------|---------|-------------|
-| Auth | `login`, `logout` | Authenticate with API key, wallet, or browser |
-| Operator | `start`, `stop` | One-command GPU operator onboarding |
-| Consumer | `run`, `train`, `infer`, `connect` | Submit and monitor GPU jobs |
-| Setup | `init`, `wallet`, `faucet`, `stake`, `worker` | Manual setup and management |
-| Monitor | `status`, `health`, `earnings`, `jobs` | Dashboards and diagnostics |
-
-See [`cli/README.md`](./cli/README.md) for full command reference.
-
-## Python SDK (`bitsage-sdk`)
-
-### Easy API
-
-```python
-import bitsage
-
-bitsage.login()                                          # Uses ~/.bitsage/credentials
-output = await bitsage.infer("qwen-14b", "Hello")       # One-shot inference
-job = await bitsage.train(model="llama-3.1-8b", ...)    # Training job -> JobHandle
-result = await job.wait()                                # Block until done
-await result.download("./output/")                       # Download results
-job = await bitsage.run("script.py", gpu="h100")         # Remote execution
-workers = await bitsage.workers()                        # List GPU workers
-```
-
-### Full Client
-
-```python
-from bitsage import BitSageClient, JobType, SubmitJobRequest
-
-async with BitSageClient() as client:
-    response = await client.submit_job(
-        SubmitJobRequest(
-            job_type=JobType.ai_inference("llama-7b", batch_size=1),
-            input_data="base64_encoded_data",
-        )
-    )
-    result = await client.wait_for_completion(response.job_id)
-```
-
-### ZKML Proving
-
-```python
-from bitsage import ZkmlProverClient
-
-prover = ZkmlProverClient()                    # auto-detects BITSAGE_PROVER_URL
-health = await prover.health()
-result = await prover.prove("model-id", gpu=True)
-print(f"Calldata: {len(result.calldata)} felts")
-```
-
-### On-Chain Verification
-
-```python
-from bitsage import ZkmlVerifierClient
-
-verifier = ZkmlVerifierClient()
-is_verified = await verifier.is_proof_verified("0xabc...")
-commitment = await verifier.get_model_commitment("model-id")
-```
-
-See [`python/README.md`](./python/README.md) for full API reference.
-
-## TypeScript SDK (`@bitsage/sdk`)
-
-```bash
-npm install @bitsage/sdk
-```
-
-```typescript
-import { StwoProverClient } from '@bitsage/sdk';
-
-const prover = new StwoProverClient({ baseUrl: 'http://localhost:8080' });
-
-const model = await prover.loadZkmlModel({ modelPath: '/path/to/model.onnx' });
-const result = await prover.proveZkml({ modelId: model.modelId, gpu: true });
-console.log(`Calldata: ${result.calldata.length} felts`);
-```
-
-**Modules:** Batch processing, Dashboard, Governance, Mining, Payments, Privacy (encryption/keys), Staking, STWO Prover, TEE, WebSocket, Workers.
-
-**React hooks:** `useJobs`, `useWorkers`, `useStaking`, `useDashboard`, `useMining`, `useGovernance`, `useWebSocketHooks`, `useConfidentialSwap`.
-
-## Rust SDK (`bitsage-sdk`)
-
-```toml
-[dependencies]
-bitsage-sdk = "0.1"
-tokio = { version = "1", features = ["full"] }
-```
-
-```rust
-use bitsage_sdk::zkml::ZkmlProverClient;
-
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let prover = ZkmlProverClient::default()?;
-    let health = prover.health().await?;
-    let result = prover.prove("model-id", true, 600).await?;
-    println!("Calldata: {} felts", result.calldata.len());
-    Ok(())
-}
-```
-
-## MCP Server (Claude / AI Agents)
-
-40+ tools for Claude integration:
-
-```json
-{
-  "mcpServers": {
-    "bitsage": {
-      "command": "node",
-      "args": ["mcp-server/dist/index.js"]
-    }
-  }
-}
-```
-
-Key tools: `bitsage_submit_zkml_proof`, `bitsage_get_zkml_proof_status`, `bitsage_verify_zkml_onchain`, `bitsage_submit_job`, `bitsage_list_workers`, `bitsage_stake`, and 30+ more.
-
-## prove-server API
-
-Start the server:
-
-```bash
-cargo build --release --bin prove-server --features server
-BIND_ADDR=0.0.0.0:8080 ./target/release/prove-server
-```
-
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/health` | Server health + GPU info |
-| POST | `/api/v1/models` | Load ONNX model |
-| POST | `/api/v1/models/hf` | Load HuggingFace model directory |
-| GET | `/api/v1/models/{id}` | Get model info |
-| POST | `/api/v1/prove` | Submit proving job |
-| GET | `/api/v1/prove/{id}` | Get job status |
-| GET | `/api/v1/prove/{id}/result` | Get proof result |
-
-## Coordinator API
-
-The coordinator (rust-node) exposes 35+ REST endpoints:
-
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/health` | Coordinator health |
-| POST | `/api/v1/jobs/submit` | Submit a compute job |
-| GET | `/api/v1/jobs/{id}` | Get job status |
-| GET | `/api/v1/jobs/{id}/result` | Get job result |
-| GET | `/api/v1/jobs/{id}/stream` | SSE live updates |
-| POST | `/api/v1/workers/register` | Register a worker |
-| GET | `/api/v1/workers/{id}/status` | Worker status |
-| GET | `/api/v1/workers/{id}/earnings` | Worker earnings |
-| GET | `/api/v1/network/stats` | Network statistics |
-| POST | `/api/v1/faucet/claim` | Claim testnet tokens |
-| POST | `/api/v1/inference/stream` | Streaming inference |
-| WS | `/ws` | WebSocket real-time events |
-
-## SDK Method Matrix
-
-| Feature | CLI | Python | TypeScript | Rust | MCP |
-|---------|-----|--------|------------|------|-----|
-| Login/auth | `bitsage login` | `bitsage.login()` | — | — | — |
-| Train model | `bitsage train` | `bitsage.train()` | `submitJob()` | `submit_job()` | `bitsage_submit_job` |
-| Run script | `bitsage run` | `bitsage.run()` | `submitJob()` | `submit_job()` | `bitsage_submit_job` |
-| Inference | `bitsage infer` | `bitsage.infer()` | `submitJob()` | `submit_job()` | `bitsage_submit_job` |
-| Job connect | `bitsage connect` | `job.wait()` | `streamJobStatus()` | — | — |
-| Operator start | `bitsage start` | — | — | — | — |
-| Load model | — | `load_model()` | `loadZkmlModel()` | `load_model()` | auto |
-| Prove | — | `prove()` | `proveZkml()` | `prove()` | `bitsage_submit_zkml_proof` |
-| On-chain verify | — | `is_proof_verified()` | `isZkmlProofVerified()` | `is_proof_verified()` | `bitsage_verify_zkml_onchain` |
-| List workers | `bitsage status` | `bitsage.workers()` | `listWorkers()` | `list_workers()` | `bitsage_list_workers` |
-| Staking | `bitsage stake` | `client.stake()` | `stake()` | `stake()` | `bitsage_stake` |
-| Faucet | `bitsage faucet` | `client.faucet_claim()` | `faucetClaim()` | `faucet_claim()` | `bitsage_faucet_claim` |
+| Model | Params | Prove Time (GPU) | Recursive Felts |
+|-------|--------|-------------------|-----------------|
+| SmolLM2-135M | 135M | ~102s | 942 |
+| Qwen2-0.5B | 500M | ~45s | ~900 |
+| Phi-3-mini | 3.8B | ~180s | ~950 |
+| Custom HuggingFace | Any LLaMA/Qwen/Phi | Varies | ~950 |
 
 ## Environment Variables
 
-All SDKs respect these environment variables:
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `OBELYSK_API_KEY` | API key for hosted prover | For hosted |
+| `OBELYSK_PROVER_URL` | Custom prover URL | For self-hosted |
+| `STARKNET_ACCOUNT` | Starknet account address | For on-chain |
+| `STARKNET_PRIVATE_KEY` | Starknet private key | For on-chain |
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `BITSAGE_API_KEY` | — | API key for authentication |
-| `BITSAGE_API_URL` | `https://api.bitsage.network` | Coordinator API |
-| `BITSAGE_PROVER_URL` | `http://localhost:8080` | prove-server endpoint |
-| `ZKML_VERIFIER_ADDRESS` | `0x005928ac...` | On-chain verifier contract |
-| `STARKNET_RPC_URL` | Sepolia public RPC | Starknet RPC |
+## Configuration
 
-## Architecture
+All SDKs accept a prover URL. Default is the hosted service:
 
-```
-User
-  │
-  ├─ bitsage CLI ────────────────────┐
-  ├─ Python SDK ─────────────────────┤
-  ├─ TypeScript SDK ─────────────────┤
-  ├─ Rust SDK ───────────────────────┤
-  └─ MCP Server (Claude) ───────────┤
-                                     │
-                      ┌──────────────┘
-                      ▼
-              Coordinator (rust-node)
-              REST API + WebSocket
-                      │
-          ┌───────────┼───────────┐
-          ▼           ▼           ▼
-     GPU Worker   GPU Worker   GPU Worker
-     (sage-worker) ──► prove-server
-                          │
-                          ▼
-                   Starknet L2
-                (STARK verification)
+```typescript
+// Use hosted prover (default)
+const client = createProverClient();
+
+// Use your own GPU prover
+const client = createProverClient({ url: "http://your-gpu:8080" });
 ```
 
-## License
+## Links
 
-MIT OR Apache-2.0
+- [Main Documentation](../libs/stwo-ml/README.md)
+- [Getting Started Guide](../libs/stwo-ml/scripts/pipeline/GETTING_STARTED.md)
+- [On-Chain Verification](../libs/stwo-ml/docs/ON_CHAIN_VERIFICATION.md)
+- [npm: @obelyzk/sdk](https://www.npmjs.com/package/@obelyzk/sdk)
+- [PyPI: obelyzk](https://pypi.org/project/obelyzk/)

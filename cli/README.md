@@ -1,263 +1,176 @@
-# @bitsage/cli
+# @obelyzk/cli
 
-The BitSage CLI. One command to earn with your GPU, or use GPUs for ML.
+Command-line interface for ObelyZK -- prove ML models and verify on Starknet from your terminal.
 
-## 30-Second Quick Start
-
-```bash
-npm install -g @bitsagecli/cli
-
-bitsage login
-bitsage start     # GPU earning in one command
-```
+All proofs use full OODS + Merkle + FRI + PoW (trustless) verification on Starknet Sepolia.
 
 ## Installation
 
 ```bash
-npm install -g @bitsagecli/cli
+# Via npm
+npm install -g @obelyzk/cli
+
+# Or one-liner
+curl -sSf https://raw.githubusercontent.com/obelyzk/stwo-ml/main/install.sh | sh
 ```
 
-Or via direct download:
+## Quick Start
 
 ```bash
-curl -fsSL https://get.bitsage.sh | sh
+# Prove a model
+obelysk prove --model smollm2-135m --input "Hello world"
+
+# Prove and verify on-chain
+obelysk prove --model smollm2-135m --input "Hello world" --on-chain
+
+# List available models
+obelysk models
+
+# Download a model for self-hosting
+obelysk models --download smollm2-135m
 ```
 
-## GPU Operator (Earn SAGE)
+## Commands
 
-Have a GPU? Start earning in two commands:
+### `obelysk prove`
+
+Prove a model execution. Uses the hosted GPU prover by default.
 
 ```bash
-bitsage login                  # Authenticate
-bitsage start                  # Auto: detect GPU -> register -> stake -> run
-
-# That's it. Your GPU is earning SAGE tokens.
-bitsage status                 # Dashboard view
-bitsage earnings               # What you've earned
-bitsage stop                   # Pause
+obelysk prove \
+  --model smollm2-135m \
+  --input "Your input text" \
+  --on-chain \
+  --recursive \
+  --output proof.json
 ```
 
-`bitsage start` handles everything: GPU detection, wallet creation, worker registration, testnet faucet, staking, and daemon startup. No bash scripts needed.
+| Flag | Description | Default |
+|------|-------------|---------|
+| `--model` | Model name or HuggingFace ID | (required) |
+| `--input` | Input text or JSON array | (required) |
+| `--on-chain` | Submit to Starknet | false |
+| `--recursive` | Use recursive STARK (1 TX) | true |
+| `--output` | Save proof to file | stdout |
+| `--prover-url` | Custom prover URL | `https://api.obelysk.com` |
+| `--network` | Starknet network | sepolia |
+| `--quiet` | Suppress progress output | false |
 
-## GPU Consumer (Use GPUs for ML)
+### `obelysk submit`
 
-### Run any script on remote GPU
+Submit an existing proof to Starknet.
 
 ```bash
-bitsage run train.py --gpu h100
-bitsage run preprocess.sh --gpu any --include data/ --env BATCH_SIZE=32
+obelysk submit --proof proof.json --network sepolia
 ```
 
-### Submit training jobs
+### `obelysk models`
+
+List or download available models.
 
 ```bash
-bitsage train --model llama-3.1-8b --dataset ./data/ --epochs 3
-bitsage train --model qwen-14b --dataset s3://bucket/data.jsonl --gpu h100 --method lora
+# List all models
+obelysk models
+
+# Download for local proving
+obelysk models --download smollm2-135m
+
+# Show model details
+obelysk models --info smollm2-135m
 ```
 
-### One-shot inference
+### `obelysk status`
+
+Check proving job status.
 
 ```bash
-bitsage infer --model qwen-14b --input "What is ZKML?"
-echo "Explain transformers" | bitsage infer --model llama-3.1-8b --stream
-bitsage infer --model phi-3-mini --input-file prompts.jsonl --json
+obelysk status --job job-abc123
 ```
 
-### Monitor jobs
+### `obelysk config`
+
+Configure default settings.
 
 ```bash
-bitsage jobs                   # List your jobs
-bitsage connect <job-id>       # Live log viewer / interactive terminal
-bitsage logs <job-id>          # Stream logs (alias for connect)
+# Set default prover
+obelysk config set prover-url http://your-gpu:8080
+
+# Set API key
+obelysk config set api-key your-key
+
+# Show config
+obelysk config show
 ```
 
-## Command Reference
+## Supported Models
 
-### Auth
+| Model | Params | Prove Time (GPU) | Recursive Felts |
+|-------|--------|-------------------|-----------------|
+| SmolLM2-135M | 135M | ~102s | 942 |
+| Qwen2-0.5B | 500M | ~45s | ~900 |
+| Phi-3-mini | 3.8B | ~180s | ~950 |
 
-| Command | Description |
-|---------|-------------|
-| `bitsage login` | Authenticate (browser OAuth, API key, or wallet) |
-| `bitsage login --api-key <key>` | Auth with API key |
-| `bitsage login --wallet` | Auth with configured wallet |
-| `bitsage login --status` | Check current auth status |
-| `bitsage logout` | Clear stored credentials |
+## Self-Hosted Proving
 
-### Operator
-
-| Command | Description |
-|---------|-------------|
-| `bitsage start` | One-command operator onboarding |
-| `bitsage start --foreground` | Run worker in foreground |
-| `bitsage start --network mainnet` | Target specific network |
-| `bitsage stop` | Stop the worker daemon |
-
-### Consumer
-
-| Command | Description |
-|---------|-------------|
-| `bitsage run <script> [args]` | Run script on remote GPU |
-| `bitsage run script.py --gpu h100` | Specify GPU tier |
-| `bitsage run script.py --dry-run` | Estimate cost |
-| `bitsage train --model <name>` | Submit training job |
-| `bitsage train --model llama-3.1-8b --dataset ./data/` | Train with local data |
-| `bitsage infer --model <name> --input <text>` | Run inference |
-| `bitsage infer --model qwen-14b --stream` | Stream tokens |
-| `bitsage connect <job-id>` | Connect to running job |
-
-### Setup & Management
-
-| Command | Description |
-|---------|-------------|
-| `bitsage init [mode]` | Setup wizard (worker/validator/staker/developer) |
-| `bitsage wallet create` | Create new Starknet wallet |
-| `bitsage wallet balance` | Check wallet balance |
-| `bitsage faucet claim` | Get testnet SAGE tokens |
-| `bitsage stake deposit <amount>` | Stake SAGE tokens |
-| `bitsage stake withdraw <amount>` | Unstake (7-day lockup) |
-| `bitsage stake status` | View staking info |
-| `bitsage claim` | Claim staking rewards |
-| `bitsage worker register` | Register as network worker |
-| `bitsage worker start` | Start worker node |
-| `bitsage worker stop` | Stop worker node |
-| `bitsage worker logs [-f]` | View worker logs |
-
-### Monitoring
-
-| Command | Description |
-|---------|-------------|
-| `bitsage status` | Full dashboard (config, balance, network, worker) |
-| `bitsage status --json` | JSON output |
-| `bitsage health` | System health check |
-| `bitsage earnings` | View your earnings breakdown |
-| `bitsage jobs` | List recent jobs |
-| `bitsage jobs --status completed` | Filter by status |
-
-## Python SDK
-
-Install:
+For local GPU proving (requires NVIDIA GPU + CUDA 12+):
 
 ```bash
-pip install bitsage
+# Install and build
+./scripts/setup.sh
+
+# Prove locally (no network needed)
+obelysk prove \
+  --model-dir ~/.obelysk/models/smollm2-135m \
+  --input "test" \
+  --gkr --format ml_gkr --recursive \
+  --output proof.json
+
+# Submit to Starknet
+obelysk submit --proof proof.json
 ```
 
-Quick start:
+## On-Chain Verification
 
-```python
-import bitsage
+When `--on-chain` is set, the proof is verified by the ObelyZK Recursive Verifier using full OODS + Merkle + FRI + PoW (trustless):
 
-# Auth (uses ~/.bitsage/credentials from CLI)
-bitsage.login()
+- **Contract:** `0x707819dea6210ab58b358151419a604ffdb16809b568bf6f8933067c2a28715`
+- **Network:** Starknet Sepolia
+- **Verification:** Full OODS + Merkle + FRI + PoW (trustless)
+- **Felts:** ~942 per proof (49x compression)
+- **Cost:** ~$0.02 per verification
+- **Explorer:** `https://sepolia.starkscan.co/tx/<tx_hash>`
 
-# One-line inference
-output = await bitsage.infer("qwen-14b", "What is ZKML?")
+## Environment Variables
 
-# Submit training
-job = await bitsage.train(
-    model="llama-3.1-8b",
-    dataset="s3://my-data/train.jsonl",
-    gpu="h100",
-    epochs=3,
-)
-result = await job.wait()
-print(result.metrics)
-await result.download("./output/")
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `OBELYSK_API_KEY` | API key for hosted prover | For hosted |
+| `OBELYSK_PROVER_URL` | Custom prover URL | For self-hosted |
+| `STARKNET_ACCOUNT` | Starknet account address | For on-chain |
+| `STARKNET_PRIVATE_KEY` | Starknet private key | For on-chain |
 
-# Run arbitrary code
-job = await bitsage.run("train.py", gpu="a100", env={"BATCH_SIZE": "32"})
-
-# List workers
-workers = await bitsage.workers()
-```
-
-Full client (advanced):
-
-```python
-from bitsage import BitSageClient, JobType, SubmitJobRequest
-
-async with BitSageClient() as client:
-    response = await client.submit_job(
-        SubmitJobRequest(
-            job_type=JobType.ai_inference("llama-7b", batch_size=1),
-            input_data="base64_encoded_data",
-        )
-    )
-    result = await client.wait_for_completion(response.job_id)
-```
-
-## MCP Integration
-
-BitSage has a Claude MCP server with 40+ tools. Add to your Claude config:
+## Output Format
 
 ```json
 {
-  "mcpServers": {
-    "bitsage": {
-      "command": "node",
-      "args": ["/path/to/mcp-server/dist/index.js"]
-    }
-  }
+  "model_id": "0x57248a5c...",
+  "output": [0.123, 0.456],
+  "proof_hash": "0xabc...",
+  "recursive_proof": {
+    "total_felts": 942,
+    "calldata": ["0x...", "..."]
+  },
+  "tx_hash": "0x2c8100...",
+  "verified": true,
+  "prove_time": 102.3,
+  "recursive_time": 3.55
 }
 ```
 
-Then ask Claude: "Submit a training job for llama-3.1-8b on BitSage"
+## Links
 
-## Configuration
-
-All config lives in `~/.bitsage/`:
-
-```
-~/.bitsage/
-  config.json         # Network, wallet, worker settings
-  credentials         # Auth token (chmod 600)
-  keystores/          # Encrypted wallet keystores
-  bin/                # Downloaded worker/validator binaries
-  worker.pid          # Running worker PID
-  worker.log          # Worker output logs
-```
-
-### Environment Variables
-
-| Variable | Description |
-|----------|-------------|
-| `BITSAGE_API_KEY` | API key (overrides credentials file) |
-| `BITSAGE_API_URL` | Coordinator URL override |
-| `RUST_LOG` | Worker log level (trace/debug/info/warn/error) |
-| `DEBUG` | Enable CLI debug output |
-
-## Troubleshooting
-
-**"No healthy coordinator found"** — Check your network connection. Try `bitsage health` for diagnostics.
-
-**"Not authenticated"** — Run `bitsage login`. Credentials expire after 30 days.
-
-**"Worker binary not found"** — Run `bitsage worker start --update` to download the latest binary.
-
-**"Faucet cooldown active"** — Testnet faucet has a cooldown. Run `bitsage faucet status` to check.
-
-**GPU not detected** — Ensure `nvidia-smi` is available. The CLI uses it for GPU detection.
-
-## Development
-
-```bash
-git clone https://github.com/Bitsage-Network/bitsage-network
-cd bitsage-network/sdk/cli
-
-npm install
-npm run build
-npm link
-
-# Test
-bitsage --help
-bitsage login --status
-```
-
-## Requirements
-
-- Node.js >= 18.0.0
-- npm or yarn
-- NVIDIA GPU + drivers (for operator mode)
-
-## License
-
-MIT
+- [GitHub](https://github.com/obelyzk/stwo-ml)
+- [npm](https://www.npmjs.com/package/@obelyzk/cli)
+- [TypeScript SDK](../typescript/README.md)
+- [Python SDK](../python/README.md)
+- [Getting Started](../../libs/stwo-ml/scripts/pipeline/GETTING_STARTED.md)
