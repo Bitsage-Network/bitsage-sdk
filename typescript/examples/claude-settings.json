@@ -8,7 +8,9 @@
         "STARKNET_RPC": "https://starknet-sepolia.g.alchemy.com/starknet/version/rpc/v0_7/YOUR_KEY",
         "FIREWALL_CONTRACT": "0x_YOUR_FIREWALL_CONTRACT_ADDRESS",
         "VERIFIER_CONTRACT": "0x_YOUR_VERIFIER_CONTRACT_ADDRESS",
-        "PROVER_API_KEY": ""
+        "PROVER_API_KEY": "",
+        "DEPLOYER_PRIVKEY": "",
+        "DEPLOYER_ADDRESS": ""
       }
     }
   },
@@ -20,6 +22,28 @@
           {
             "type": "command",
             "command": "./node_modules/@obelyzk/sdk/src/hooks/pre-tool-use.sh"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash|mcp__obelyzk-policy__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./node_modules/@obelyzk/sdk/src/hooks/post-tool-use.sh",
+            "async": true
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./node_modules/@obelyzk/sdk/src/hooks/session-start.sh"
           }
         ]
       }

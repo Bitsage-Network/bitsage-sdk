@@ -86,7 +86,7 @@ const DECISION_LABELS: Record<number, string> = {
 
 const tools: Tool[] = [
   {
-    name: "firewall_classify",
+    name: "obelyzk_classify",
     description:
       "Classify a transaction through the ZKML classifier. Returns a cryptographically-proven threat score and decision (approve/escalate/block). Use this BEFORE executing any on-chain transaction to check if it is safe.",
     inputSchema: {
@@ -133,7 +133,7 @@ const tools: Tool[] = [
     },
   },
   {
-    name: "firewall_agent_status",
+    name: "obelyzk_agent_status",
     description:
       "Check the trust status of an agent on the firewall contract. Returns registration status, trust score (0-100000), strike count, and whether the agent is trusted.",
     inputSchema: {
@@ -148,7 +148,7 @@ const tools: Tool[] = [
     },
   },
   {
-    name: "firewall_check_action",
+    name: "obelyzk_check_action",
     description:
       "Check the status of a specific action submitted to the firewall. Returns the decision (pending/approved/escalated/blocked), threat score, and IO commitment.",
     inputSchema: {
@@ -163,7 +163,7 @@ const tools: Tool[] = [
     },
   },
   {
-    name: "firewall_health",
+    name: "obelyzk_health",
     description:
       "Check health of the ObelyZK policy infrastructure. Returns prover server status, firewall contract reachability, and classifier model status.",
     inputSchema: {
@@ -171,9 +171,73 @@ const tools: Tool[] = [
       properties: {},
     },
   },
+  {
+    name: "obelyzk_get_policy",
+    description:
+      "Get the current policy configuration. Shows which soundness gates are enforced, the weight binding mode, and the Poseidon commitment hash. Use this to understand what verification level is active.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        preset: {
+          type: "string",
+          enum: ["strict", "standard", "relaxed"],
+          description: "Policy preset to inspect. Default: current active policy.",
+        },
+      },
+    },
+  },
+  {
+    name: "obelyzk_list_models",
+    description:
+      "List all models available on the prover server. Returns model IDs, names, weight commitments, layer counts, and input shapes.",
+    inputSchema: {
+      type: "object",
+      properties: {},
+    },
+  },
+  {
+    name: "obelyzk_prove_inference",
+    description:
+      "Submit an async proof generation job for a model. Returns a job_id to poll for status. Use this for arbitrary model proving, not just classification.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        model_id: {
+          type: "string",
+          description: "Model ID (hex) or name (e.g., 'smollm2-135m')",
+        },
+        input_data: {
+          type: "array",
+          items: { type: "number" },
+          description: "Input tensor data as flat array of numbers",
+        },
+        policy: {
+          type: "string",
+          enum: ["strict", "standard", "relaxed"],
+          description: "Policy preset for proving. Default: 'standard'",
+        },
+      },
+      required: ["model_id", "input_data"],
+    },
+  },
+  {
+    name: "obelyzk_verify_proof",
+    description:
+      "Check if a proof has been verified on-chain. Returns verification status, model ID, and IO commitment.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        proof_hash: {
+          type: "string",
+          description: "Proof hash (hex, from classify or prove result)",
+        },
+      },
+      required: ["proof_hash"],
+    },
+  },
   // ── Write Tools (require DEPLOYER_PRIVKEY + DEPLOYER_ADDRESS) ──────
   {
-    name: "firewall_register_agent",
+    name: "obelyzk_register_agent",
     description:
       "Register a new agent on the firewall contract. The calling account becomes the agent owner. One-time operation per agent_id.",
     inputSchema: {
@@ -188,7 +252,7 @@ const tools: Tool[] = [
     },
   },
   {
-    name: "firewall_submit_action",
+    name: "obelyzk_submit_action",
     description:
       "Submit a pending action to the firewall contract for classification. Returns an action_id. The action must be resolved with a proof within 1 hour or it expires.",
     inputSchema: {
@@ -220,7 +284,7 @@ const tools: Tool[] = [
     },
   },
   {
-    name: "firewall_resolve_action",
+    name: "obelyzk_resolve_action",
     description:
       "Resolve a pending action with a verified ZKML proof. The proof must already be verified on the ObelyskVerifier contract. Updates the agent's trust score and applies the decision.",
     inputSchema: {
@@ -248,7 +312,7 @@ const tools: Tool[] = [
     },
   },
   {
-    name: "firewall_approve_escalated",
+    name: "obelyzk_approve_escalated",
     description:
       "Approve an escalated action (human-in-the-loop). Only the agent owner or contract owner can call this. Converts the action from escalated to approved.",
     inputSchema: {
@@ -263,7 +327,7 @@ const tools: Tool[] = [
     },
   },
   {
-    name: "firewall_reject_escalated",
+    name: "obelyzk_reject_escalated",
     description:
       "Reject an escalated action and add a strike to the agent. Only the agent owner or contract owner can call this.",
     inputSchema: {
@@ -420,6 +484,154 @@ async function handleHealth(): Promise<string> {
     "Classifier uses test (random) weights. Deploy trained weights before enabling enforcement.";
 
   return JSON.stringify(health);
+}
+
+async function handleGetPolicy(
+  args: Record<string, unknown>
+): Promise<string> {
+  // Policy presets are defined in Rust (policy.rs). We document them here.
+  const presets: Record<string, Record<string, unknown>> = {
+    strict: {
+      preset: "strict",
+      allow_missing_norm_proof: false,
+      allow_logup_activation: false,
+      allow_missing_segment_binding: false,
+      skip_rms_sq_proof: false,
+      piecewise_activation: true,
+      skip_batch_tokens: false,
+      skip_unified_stark: false,
+      weight_binding_mode: "TrustlessMode3",
+      aggregated_full_binding: true,
+      validate_decode_chain: true,
+      commitment: "0x0370c9348ed6edddf310baf5d8104d57c07f36962deea9738dd00519d9948449",
+    },
+    standard: {
+      preset: "standard",
+      allow_missing_norm_proof: true,
+      allow_logup_activation: true,
+      allow_missing_segment_binding: true,
+      skip_rms_sq_proof: true,
+      piecewise_activation: false,
+      skip_batch_tokens: true,
+      skip_unified_stark: true,
+      weight_binding_mode: "Aggregated",
+      aggregated_full_binding: true,
+      validate_decode_chain: false,
+      commitment: "computed_at_runtime",
+    },
+    relaxed: {
+      preset: "relaxed",
+      allow_missing_norm_proof: true,
+      allow_logup_activation: true,
+      allow_missing_segment_binding: true,
+      skip_rms_sq_proof: true,
+      piecewise_activation: false,
+      skip_batch_tokens: true,
+      skip_unified_stark: true,
+      weight_binding_mode: "Individual",
+      aggregated_full_binding: false,
+      validate_decode_chain: false,
+      commitment: "computed_at_runtime",
+    },
+  };
+
+  const preset = (args.preset as string) || "standard";
+  const policy = presets[preset];
+  if (!policy) {
+    return JSON.stringify({ error: `Unknown preset: ${preset}. Use strict, standard, or relaxed.` });
+  }
+  return JSON.stringify(policy);
+}
+
+async function handleListModels(): Promise<string> {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (PROVER_API_KEY) headers["Authorization"] = `Bearer ${PROVER_API_KEY}`;
+
+    const res = await fetch(`${PROVER_URL}/api/v1/models`, {
+      headers,
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+
+    if (!res.ok) {
+      return JSON.stringify({ error: `Prover returned ${res.status}` });
+    }
+    const data = await res.json();
+    return JSON.stringify(data);
+  } catch (err) {
+    return JSON.stringify({
+      error: err instanceof Error ? err.message : "Failed to list models",
+      hint: `Check that the prover is running at ${PROVER_URL}`,
+    });
+  }
+}
+
+async function handleProveInference(
+  args: Record<string, unknown>
+): Promise<string> {
+  try {
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (PROVER_API_KEY) headers["Authorization"] = `Bearer ${PROVER_API_KEY}`;
+
+    const body = {
+      model_id: args.model_id as string,
+      input: args.input_data as number[],
+      policy: (args.policy as string) || "standard",
+    };
+
+    const res = await fetch(`${PROVER_URL}/api/v1/prove`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(body),
+    });
+
+    if (!res.ok) {
+      const error = await res.json().catch(() => ({ error: res.statusText }));
+      return JSON.stringify({ error: `Prove failed (${res.status}): ${(error as any).error || res.statusText}` });
+    }
+
+    const data = await res.json() as any;
+    return JSON.stringify({
+      job_id: data.job_id,
+      status: data.status || "submitted",
+      poll_url: `${PROVER_URL}/api/v1/prove/${data.job_id}`,
+      note: "Poll the job_id endpoint for status updates. Proving may take seconds to minutes.",
+    });
+  } catch (err) {
+    return JSON.stringify({
+      error: err instanceof Error ? err.message : "Failed to submit proof job",
+      hint: `Check that the prover is running at ${PROVER_URL}`,
+    });
+  }
+}
+
+async function handleVerifyProof(
+  args: Record<string, unknown>
+): Promise<string> {
+  try {
+    const headers: Record<string, string> = {};
+    if (PROVER_API_KEY) headers["Authorization"] = `Bearer ${PROVER_API_KEY}`;
+
+    const proofHash = args.proof_hash as string;
+    const res = await fetch(`${PROVER_URL}/api/v1/verify/${proofHash}`, { headers });
+
+    if (!res.ok) {
+      if (res.status === 404) {
+        return JSON.stringify({ proof_hash: proofHash, verified: false, error: "Proof not found" });
+      }
+      return JSON.stringify({ error: `Verify failed (${res.status})` });
+    }
+
+    const data = await res.json();
+    return JSON.stringify(data);
+  } catch (err) {
+    return JSON.stringify({
+      error: err instanceof Error ? err.message : "Failed to verify proof",
+    });
+  }
 }
 
 // =============================================================================
@@ -590,31 +802,43 @@ function createPolicyServer(): Server {
       let result: string;
 
       switch (name) {
-        case "firewall_classify":
+        case "obelyzk_classify":
           result = await handleClassify(safeArgs);
           break;
-        case "firewall_agent_status":
+        case "obelyzk_agent_status":
           result = await handleAgentStatus(safeArgs);
           break;
-        case "firewall_check_action":
+        case "obelyzk_check_action":
           result = await handleCheckAction(safeArgs);
           break;
-        case "firewall_health":
+        case "obelyzk_health":
           result = await handleHealth();
           break;
-        case "firewall_register_agent":
+        case "obelyzk_get_policy":
+          result = await handleGetPolicy(safeArgs);
+          break;
+        case "obelyzk_list_models":
+          result = await handleListModels();
+          break;
+        case "obelyzk_prove_inference":
+          result = await handleProveInference(safeArgs);
+          break;
+        case "obelyzk_verify_proof":
+          result = await handleVerifyProof(safeArgs);
+          break;
+        case "obelyzk_register_agent":
           result = await handleRegisterAgent(safeArgs);
           break;
-        case "firewall_submit_action":
+        case "obelyzk_submit_action":
           result = await handleSubmitAction(safeArgs);
           break;
-        case "firewall_resolve_action":
+        case "obelyzk_resolve_action":
           result = await handleResolveAction(safeArgs);
           break;
-        case "firewall_approve_escalated":
+        case "obelyzk_approve_escalated":
           result = await handleApproveEscalated(safeArgs);
           break;
-        case "firewall_reject_escalated":
+        case "obelyzk_reject_escalated":
           result = await handleRejectEscalated(safeArgs);
           break;
         default:
