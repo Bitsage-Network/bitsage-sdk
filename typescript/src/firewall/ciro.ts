@@ -124,7 +124,7 @@ export class CiroClient {
   }
 
   private get apiBase(): string {
-    return `${this.baseUrl}/api/singularity/${this.org}/blockchain`;
+    return `${this.baseUrl}/api/v1/blockchain`;
   }
 
   private async request<T>(
