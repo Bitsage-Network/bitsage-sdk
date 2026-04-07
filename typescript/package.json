@@ -99,13 +99,15 @@
   },
   "files": [
     "dist",
+    "src/hooks",
+    "examples",
     "README.md"
   ],
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org/"
   },
-  "homepage": "https://obelysk.com",
+  "homepage": "https://obelysk.xyz",
   "bugs": {
     "url": "https://github.com/Bitsage-Network/bitsage-network/issues"
   },

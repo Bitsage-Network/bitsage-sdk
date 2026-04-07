@@ -77,7 +77,7 @@ See the full [CLI README](./cli/README.md) for all commands and flags.
 
 ## How It Works
 
-1. Your SDK call hits the hosted GPU prover at `https://api.obelysk.com`
+1. Your SDK call hits the hosted GPU prover at `https://api.obelysk.xyz`
 2. The prover executes the model over the M31 field and generates a GKR sumcheck proof
 3. A recursive STARK compresses the proof to ~942 felts (constant size, 49x compression)
 4. The proof is verified on Starknet Sepolia in a single transaction using full OODS + Merkle + FRI + PoW (trustless)

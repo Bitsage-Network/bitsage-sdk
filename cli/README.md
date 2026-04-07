@@ -52,7 +52,7 @@ obelysk prove \
 | `--on-chain` | Submit to Starknet | false |
 | `--recursive` | Use recursive STARK (1 TX) | true |
 | `--output` | Save proof to file | stdout |
-| `--prover-url` | Custom prover URL | `https://api.obelysk.com` |
+| `--prover-url` | Custom prover URL | `https://api.obelysk.xyz` |
 | `--network` | Starknet network | sepolia |
 | `--quiet` | Suppress progress output | false |
 

@@ -360,7 +360,12 @@ export class AgentFirewallSDK {
   }
 }
 
-/** Minimal ABI for the AgentFirewallZK contract (view functions only). */
+/**
+ * ABI for the AgentFirewallZK contract.
+ * Covers all view functions used by the SDK + write entrypoints for starknet.js execute().
+ * Write functions use execute() with CallData.compile() so they don't need full ABI entries,
+ * but view functions need proper ABI for Contract.call().
+ */
 const FIREWALL_ABI = [
   {
     name: "is_agent_registered",
@@ -422,6 +427,55 @@ const FIREWALL_ABI = [
     name: "get_action_io_commitment",
     type: "function",
     inputs: [{ name: "action_id", type: "felt" }],
+    outputs: [{ type: "felt" }],
+    state_mutability: "view",
+  },
+  {
+    name: "get_owner",
+    type: "function",
+    inputs: [],
+    outputs: [{ type: "felt" }],
+    state_mutability: "view",
+  },
+  {
+    name: "get_verifier",
+    type: "function",
+    inputs: [],
+    outputs: [{ type: "felt" }],
+    state_mutability: "view",
+  },
+  {
+    name: "get_classifier_model_id",
+    type: "function",
+    inputs: [],
+    outputs: [{ type: "felt" }],
+    state_mutability: "view",
+  },
+  {
+    name: "get_thresholds",
+    type: "function",
+    inputs: [],
+    outputs: [{ type: "felt" }, { type: "felt" }, { type: "felt" }],
+    state_mutability: "view",
+  },
+  {
+    name: "get_agent_owner",
+    type: "function",
+    inputs: [{ name: "agent_id", type: "felt" }],
+    outputs: [{ type: "felt" }],
+    state_mutability: "view",
+  },
+  {
+    name: "get_action_agent",
+    type: "function",
+    inputs: [{ name: "action_id", type: "felt" }],
+    outputs: [{ type: "felt" }],
+    state_mutability: "view",
+  },
+  {
+    name: "is_paused",
+    type: "function",
+    inputs: [],
     outputs: [{ type: "felt" }],
     state_mutability: "view",
   },

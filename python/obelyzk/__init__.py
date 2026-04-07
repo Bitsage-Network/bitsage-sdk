@@ -16,7 +16,7 @@ from typing import Any, Optional
 import httpx
 
 
-DEFAULT_URL = os.environ.get("OBELYSK_PROVER_URL", "https://api.obelysk.com")
+DEFAULT_URL = os.environ.get("OBELYSK_PROVER_URL", "https://api.obelysk.xyz")
 DEFAULT_CONTRACT = "0x526fcdb940f92dc50bc3a234ffafe6d08d7b2e3b69f6cb41678331ee6a5a03c"
 
 
@@ -24,7 +24,7 @@ class ObelyzkClient:
     """Synchronous client for ObelyZK prove-server.
 
     Args:
-        url: Prover URL. Default: $OBELYSK_PROVER_URL or https://api.obelysk.com
+        url: Prover URL. Default: $OBELYSK_PROVER_URL or https://api.obelysk.xyz
         api_key: API key for authentication. Default: $OBELYSK_API_KEY
         timeout: Request timeout in seconds.
     """

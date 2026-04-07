@@ -10,7 +10,7 @@ readme = "README.md"
 license = "MIT"
 requires-python = ">=3.9"
 authors = [
-    { name = "ObelyZK", email = "dev@obelysk.com" }
+    { name = "ObelyZK", email = "dev@obelysk.xyz" }
 ]
 keywords = ["obelyzk", "zkml", "starknet", "zero-knowledge", "machine-learning", "stark"]
 classifiers = [
@@ -39,7 +39,7 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://obelysk.com"
+Homepage = "https://obelysk.xyz"
 Documentation = "https://github.com/Bitsage-Network/stwo-ml"
 Repository = "https://github.com/Bitsage-Network/stwo-ml"
 
