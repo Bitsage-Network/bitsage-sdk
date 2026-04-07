@@ -133,7 +133,7 @@ obelysk submit --proof proof.json
 
 When `--on-chain` is set, the proof is verified by the ObelyZK Recursive Verifier using full OODS + Merkle + FRI + PoW (trustless):
 
-- **Contract:** `0x526fcdb940f92dc50bc3a234ffafe6d08d7b2e3b69f6cb41678331ee6a5a03c`
+- **Contract:** `0x1c208a5fe731c0d03b098b524f274c537587ea1d43d903838cc4a2bf90c40c7`
 - **Network:** Starknet Sepolia
 - **Verification:** Full OODS + Merkle + FRI + PoW (trustless)
 - **Felts:** ~942 per proof (49x compression)

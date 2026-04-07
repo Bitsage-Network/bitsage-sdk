@@ -17,7 +17,7 @@ import httpx
 
 
 DEFAULT_URL = os.environ.get("OBELYSK_PROVER_URL", "https://api.obelysk.xyz")
-DEFAULT_CONTRACT = "0x526fcdb940f92dc50bc3a234ffafe6d08d7b2e3b69f6cb41678331ee6a5a03c"
+DEFAULT_CONTRACT = "0x1c208a5fe731c0d03b098b524f274c537587ea1d43d903838cc4a2bf90c40c7"
 
 
 class ObelyzkClient:
