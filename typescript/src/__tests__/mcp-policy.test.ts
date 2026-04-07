@@ -39,7 +39,7 @@ describe("MCP Tool Schemas", () => {
     );
 
     const obelyzkTools = toolNames.filter((n) => n.startsWith("obelyzk_"));
-    expect(obelyzkTools.length).toBeGreaterThanOrEqual(13);
+    expect(obelyzkTools.length).toBeGreaterThanOrEqual(17);
 
     // No firewall_* tools should remain
     const firewallTools = toolNames.filter((n) => n.startsWith("firewall_"));
@@ -67,6 +67,10 @@ describe("MCP Tool Schemas", () => {
       "obelyzk_resolve_action",
       "obelyzk_approve_escalated",
       "obelyzk_reject_escalated",
+      "obelyzk_enrich_target",
+      "obelyzk_address_risk",
+      "obelyzk_alerts",
+      "obelyzk_data_lake_stats",
     ];
 
     for (const tool of requiredTools) {
@@ -98,7 +102,7 @@ describe("MCP Tool Schemas", () => {
     expect(switchCases).toContain("obelyzk_resolve_action");
     expect(switchCases).toContain("obelyzk_approve_escalated");
     expect(switchCases).toContain("obelyzk_reject_escalated");
-    expect(switchCases).toHaveLength(13);
+    expect(switchCases).toHaveLength(17);
   });
 });
 

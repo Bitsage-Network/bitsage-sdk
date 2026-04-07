@@ -55,3 +55,12 @@ export type {
   PolicyEnforcerConfig,
   ActionCheck,
 } from "./middleware";
+export { CiroClient } from "./ciro";
+export type {
+  CiroConfig,
+  EnrichmentResult,
+  AddressRisk,
+  CiroAlert,
+  DataLakeStats,
+  RiskLevel,
+} from "./ciro";

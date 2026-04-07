@@ -23,6 +23,7 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import { Account, RpcProvider } from "starknet";
 import { AgentFirewallSDK } from "../firewall/client";
+import { CiroClient } from "../firewall/ciro";
 
 // =============================================================================
 // Configuration
@@ -38,6 +39,8 @@ const STARKNET_RPC =
 const FIREWALL_CONTRACT = process.env.FIREWALL_CONTRACT ?? "";
 const VERIFIER_CONTRACT = process.env.VERIFIER_CONTRACT ?? "";
 const PROVER_API_KEY = process.env.PROVER_API_KEY;
+const CIRO_URL = process.env.CIRO_URL ?? "";
+const CIRO_API_KEY = process.env.CIRO_API_KEY ?? "";
 
 // =============================================================================
 // Client Initialization
@@ -233,6 +236,76 @@ const tools: Tool[] = [
         },
       },
       required: ["proof_hash"],
+    },
+  },
+  {
+    name: "obelyzk_enrich_target",
+    description:
+      "Enrich a target address with intelligence from CIRO data lake. Returns risk score, sanctions status, Forta alerts, verification status, and behavioral context. Requires CIRO_URL and CIRO_API_KEY.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        target: {
+          type: "string",
+          description: "Target contract address (hex)",
+        },
+        sender: {
+          type: "string",
+          description: "Sender address (hex, optional — provides behavioral context)",
+        },
+        value: {
+          type: "string",
+          description: "Transaction value (decimal string). Default: '0'",
+        },
+        selector: {
+          type: "string",
+          description: "Function selector (hex). Default: '0x0'",
+        },
+      },
+      required: ["target"],
+    },
+  },
+  {
+    name: "obelyzk_address_risk",
+    description:
+      "Get comprehensive risk assessment for an address from CIRO. Returns risk level, sanctions status, exploit involvement, Forta alert count, and address cluster information.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        address: {
+          type: "string",
+          description: "Address to assess (hex)",
+        },
+      },
+      required: ["address"],
+    },
+  },
+  {
+    name: "obelyzk_alerts",
+    description:
+      "Get recent security alerts from CIRO's detection pipeline (Forta bots + custom heuristics). Filter by severity level.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        severity: {
+          type: "string",
+          enum: ["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO"],
+          description: "Filter by alert severity",
+        },
+        limit: {
+          type: "number",
+          description: "Max alerts to return. Default: 20",
+        },
+      },
+    },
+  },
+  {
+    name: "obelyzk_data_lake_stats",
+    description:
+      "Get statistics about CIRO's blockchain data lake — total transactions indexed, label distribution, Forta bots active, sanctioned addresses tracked.",
+    inputSchema: {
+      type: "object",
+      properties: {},
     },
   },
   // ── Write Tools (require DEPLOYER_PRIVKEY + DEPLOYER_ADDRESS) ──────
@@ -635,6 +708,86 @@ async function handleVerifyProof(
 }
 
 // =============================================================================
+// CIRO Intelligence Handlers
+// =============================================================================
+
+function requireCiro(): CiroClient {
+  if (!CIRO_URL || !CIRO_API_KEY) {
+    throw new Error(
+      "CIRO integration requires CIRO_URL and CIRO_API_KEY environment variables"
+    );
+  }
+  return new CiroClient({
+    baseUrl: CIRO_URL,
+    apiKey: CIRO_API_KEY,
+  });
+}
+
+async function handleEnrichTarget(
+  args: Record<string, unknown>
+): Promise<string> {
+  try {
+    const ciro = requireCiro();
+    const result = await ciro.enrichTransaction({
+      target: args.target as string,
+      sender: (args.sender as string) || undefined,
+      value: (args.value as string) || "0",
+      selector: (args.selector as string) || "0x0",
+    });
+    return JSON.stringify(result);
+  } catch (err) {
+    return JSON.stringify({
+      error: err instanceof Error ? err.message : "Enrichment failed",
+      hint: "Set CIRO_URL and CIRO_API_KEY, or check CIRO service availability",
+    });
+  }
+}
+
+async function handleAddressRisk(
+  args: Record<string, unknown>
+): Promise<string> {
+  try {
+    const ciro = requireCiro();
+    const result = await ciro.getAddressRisk(args.address as string);
+    return JSON.stringify(result);
+  } catch (err) {
+    return JSON.stringify({
+      error: err instanceof Error ? err.message : "Risk assessment failed",
+      hint: "Set CIRO_URL and CIRO_API_KEY",
+    });
+  }
+}
+
+async function handleAlerts(
+  args: Record<string, unknown>
+): Promise<string> {
+  try {
+    const ciro = requireCiro();
+    const alerts = await ciro.getRecentAlerts({
+      severity: (args.severity as string) || undefined,
+      limit: (args.limit as number) || 20,
+    });
+    return JSON.stringify({ alerts, count: alerts.length });
+  } catch (err) {
+    return JSON.stringify({
+      error: err instanceof Error ? err.message : "Alert fetch failed",
+    });
+  }
+}
+
+async function handleDataLakeStats(): Promise<string> {
+  try {
+    const ciro = requireCiro();
+    const stats = await ciro.getStats();
+    return JSON.stringify(stats);
+  } catch (err) {
+    return JSON.stringify({
+      error: err instanceof Error ? err.message : "Stats fetch failed",
+    });
+  }
+}
+
+// =============================================================================
 // Write Tool Handlers
 // =============================================================================
 
@@ -825,6 +978,18 @@ function createPolicyServer(): Server {
           break;
         case "obelyzk_verify_proof":
           result = await handleVerifyProof(safeArgs);
+          break;
+        case "obelyzk_enrich_target":
+          result = await handleEnrichTarget(safeArgs);
+          break;
+        case "obelyzk_address_risk":
+          result = await handleAddressRisk(safeArgs);
+          break;
+        case "obelyzk_alerts":
+          result = await handleAlerts(safeArgs);
+          break;
+        case "obelyzk_data_lake_stats":
+          result = await handleDataLakeStats();
           break;
         case "obelyzk_register_agent":
           result = await handleRegisterAgent(safeArgs);
