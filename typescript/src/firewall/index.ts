@@ -48,4 +48,5 @@ export type {
   Decision,
   SubmitActionResult,
   ResolveResult,
+  EvaluateActionResult,
 } from "./types";

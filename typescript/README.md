@@ -133,7 +133,7 @@ console.log("Result:", job.result);
 
 When `onChain: true`, the SDK submits the proof to the ObelyZK Recursive Verifier contract on Starknet Sepolia. Verification uses full OODS + Merkle + FRI + PoW (trustless).
 
-- **Contract:** `0x707819dea6210ab58b358151419a604ffdb16809b568bf6f8933067c2a28715`
+- **Contract:** `0x526fcdb940f92dc50bc3a234ffafe6d08d7b2e3b69f6cb41678331ee6a5a03c`
 - **Method:** `verify_recursive(model_id, io_commitment, stark_proof_data)`
 - **Verification:** Full OODS + Merkle + FRI + PoW (trustless)
 - **Felts:** ~942 per proof (49x compression)
@@ -149,7 +149,7 @@ const provider = new RpcProvider({
 });
 
 const result = await provider.callContract({
-  contractAddress: "0x707819dea6210ab58b358151419a604ffdb16809b568bf6f8933067c2a28715",
+  contractAddress: "0x526fcdb940f92dc50bc3a234ffafe6d08d7b2e3b69f6cb41678331ee6a5a03c",
   entrypoint: "get_recursive_verification_count",
   calldata: [modelId],
 });

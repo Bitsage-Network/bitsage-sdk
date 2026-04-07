@@ -142,7 +142,7 @@ asyncio.run(main())
 
 Proofs are verified on the ObelyZK Recursive Verifier contract using full OODS + Merkle + FRI + PoW (trustless):
 
-- **Contract:** `0x707819dea6210ab58b358151419a604ffdb16809b568bf6f8933067c2a28715`
+- **Contract:** `0x526fcdb940f92dc50bc3a234ffafe6d08d7b2e3b69f6cb41678331ee6a5a03c`
 - **Network:** Starknet Sepolia
 - **Verification:** Full OODS + Merkle + FRI + PoW (trustless)
 - **Felts:** ~942 per proof (49x compression)
@@ -158,7 +158,7 @@ node_client = FullNodeClient(
 )
 
 result = await node_client.call_contract(
-    contract_address=0x707819dea6210ab58b358151419a604ffdb16809b568bf6f8933067c2a28715,
+    contract_address=0x526fcdb940f92dc50bc3a234ffafe6d08d7b2e3b69f6cb41678331ee6a5a03c,
     entry_point_selector="get_recursive_verification_count",
     calldata=[model_id],
 )

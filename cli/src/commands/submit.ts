@@ -1,6 +1,6 @@
 import { Command } from 'commander';
 
-const DEFAULT_CONTRACT = '0x604ff202cf107d754afcc86c760fbf54430c13591ef72db214bb5c82de4c696';
+const DEFAULT_CONTRACT = '0x526fcdb940f92dc50bc3a234ffafe6d08d7b2e3b69f6cb41678331ee6a5a03c';
 const DEFAULT_RPC = 'https://starknet-sepolia.g.alchemy.com/starknet/version/rpc/v0_8/demo';
 
 export const submitCommand = new Command('submit')

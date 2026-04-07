@@ -39,6 +39,8 @@ import type {
   ClassifyResult,
   AgentStatus,
   Decision,
+  SubmitActionResult,
+  ResolveResult,
 } from "./types";
 
 /** Policy commitment for PolicyConfig::strict() — must match Rust/Cairo. */
@@ -204,6 +206,149 @@ export class AgentFirewallSDK {
     return contract.is_trusted(agentId) as Promise<boolean>;
   }
 
+  /** Get the decision for an action (0=pending, 1=approved, 2=escalated, 3=blocked). */
+  async getActionDecision(actionId: number): Promise<number> {
+    const contract = new Contract(
+      FIREWALL_ABI,
+      this.config.firewallContract,
+      this.provider,
+    );
+    return Number(await contract.get_action_decision(actionId));
+  }
+
+  /** Get the threat score for a resolved action. */
+  async getActionThreatScore(actionId: number): Promise<number> {
+    const contract = new Contract(
+      FIREWALL_ABI,
+      this.config.firewallContract,
+      this.provider,
+    );
+    return Number(await contract.get_action_threat_score(actionId));
+  }
+
+  /** Get the IO commitment for an action. */
+  async getActionIoCommitment(actionId: number): Promise<string> {
+    const contract = new Contract(
+      FIREWALL_ABI,
+      this.config.firewallContract,
+      this.provider,
+    );
+    const result = await contract.get_action_io_commitment(actionId);
+    return `0x${BigInt(result).toString(16)}`;
+  }
+
+  // ── On-Chain Actions ────────────────────────────────────────────────
+
+  /**
+   * Submit a pending action to the firewall contract.
+   * Returns the action_id assigned by the contract.
+   */
+  async submitAction(
+    agentId: string,
+    target: string,
+    value: string,
+    selector: number,
+    ioCommitment: string
+  ): Promise<SubmitActionResult> {
+    this.requireAccount();
+    const tx = await this.config.account!.execute({
+      contractAddress: this.config.firewallContract,
+      entrypoint: "submit_action",
+      calldata: CallData.compile({
+        agent_id: agentId,
+        target,
+        value,
+        selector,
+        io_commitment: ioCommitment,
+      }),
+    });
+    const receipt = await this.provider.waitForTransaction(tx.transaction_hash);
+
+    // Extract action_id from ActionSubmitted event
+    let actionId = 0;
+    const events = (receipt as any).events;
+    if (Array.isArray(events)) {
+      for (const event of events) {
+        if (event.data && event.data.length >= 2) {
+          const candidateId = Number(BigInt(event.data[0]));
+          if (candidateId > 0) {
+            actionId = candidateId;
+            break;
+          }
+        }
+      }
+    }
+
+    return { actionId, txHash: tx.transaction_hash };
+  }
+
+  /**
+   * Resolve a pending action with a verified ZKML proof.
+   * The proof must already be verified on the ObelyskVerifier contract.
+   */
+  async resolveAction(
+    actionId: number,
+    proofHash: string,
+    originalIoLen: number,
+    packedRawIo: string[]
+  ): Promise<ResolveResult> {
+    this.requireAccount();
+    const tx = await this.config.account!.execute({
+      contractAddress: this.config.firewallContract,
+      entrypoint: "resolve_action_with_proof",
+      calldata: CallData.compile({
+        action_id: actionId,
+        proof_hash: proofHash,
+        original_io_len: originalIoLen,
+        packed_raw_io: packedRawIo,
+      }),
+    });
+    const receipt = await this.provider.waitForTransaction(tx.transaction_hash);
+
+    // Extract decision from ActionResolved event
+    let decision: Decision = "approve";
+    let threatScore = 0;
+    const resolveEvents = (receipt as any).events;
+    if (Array.isArray(resolveEvents)) {
+      for (const event of resolveEvents) {
+        if (event.data && event.data.length >= 4) {
+          const decisionCode = Number(BigInt(event.data[2]));
+          threatScore = Number(BigInt(event.data[3]));
+          if (decisionCode === 1) decision = "approve";
+          else if (decisionCode === 2) decision = "escalate";
+          else if (decisionCode === 3) decision = "block";
+          break;
+        }
+      }
+    }
+
+    return { decision, threatScore, txHash: tx.transaction_hash };
+  }
+
+  /** Approve an escalated action (human-in-the-loop). */
+  async approveEscalated(actionId: number): Promise<string> {
+    this.requireAccount();
+    const tx = await this.config.account!.execute({
+      contractAddress: this.config.firewallContract,
+      entrypoint: "approve_escalated",
+      calldata: CallData.compile({ action_id: actionId }),
+    });
+    await this.provider.waitForTransaction(tx.transaction_hash);
+    return tx.transaction_hash;
+  }
+
+  /** Reject an escalated action and add a strike. */
+  async rejectEscalated(actionId: number): Promise<string> {
+    this.requireAccount();
+    const tx = await this.config.account!.execute({
+      contractAddress: this.config.firewallContract,
+      entrypoint: "reject_escalated",
+      calldata: CallData.compile({ action_id: actionId }),
+    });
+    await this.provider.waitForTransaction(tx.transaction_hash);
+    return tx.transaction_hash;
+  }
+
   // ── Helpers ────────────────────────────────────────────────────────
 
   private requireAccount(): void {
@@ -261,6 +406,20 @@ const FIREWALL_ABI = [
   },
   {
     name: "get_action_decision",
+    type: "function",
+    inputs: [{ name: "action_id", type: "felt" }],
+    outputs: [{ type: "felt" }],
+    state_mutability: "view",
+  },
+  {
+    name: "get_action_threat_score",
+    type: "function",
+    inputs: [{ name: "action_id", type: "felt" }],
+    outputs: [{ type: "felt" }],
+    state_mutability: "view",
+  },
+  {
+    name: "get_action_io_commitment",
     type: "function",
     inputs: [{ name: "action_id", type: "felt" }],
     outputs: [{ type: "felt" }],

@@ -85,6 +85,20 @@ export interface AgentStatus {
   trusted: boolean;
 }
 
+/** Full evaluation result from classify → submit → resolve. */
+export interface EvaluateActionResult {
+  /** Classification result from the ZKML classifier. */
+  classification: ClassifyResult;
+  /** Decision after on-chain resolution (may differ from classification if escalated). */
+  decision: Decision;
+  /** Threat score applied to the agent's EMA. */
+  threatScore: number;
+  /** Action ID on the firewall contract. */
+  actionId: number;
+  /** Transaction hash of the resolve call. */
+  txHash: string;
+}
+
 /** Firewall SDK configuration. */
 export interface FirewallConfig {
   /** Prover server URL (for /api/v1/classify). */

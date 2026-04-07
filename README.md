@@ -86,7 +86,7 @@ See the full [CLI README](./cli/README.md) for all commands and flags.
 
 All proofs are verified by the ObelyZK Recursive Verifier contract on Starknet Sepolia:
 
-- **Contract:** `0x707819dea6210ab58b358151419a604ffdb16809b568bf6f8933067c2a28715`
+- **Contract:** `0x526fcdb940f92dc50bc3a234ffafe6d08d7b2e3b69f6cb41678331ee6a5a03c`
 - **Verification:** Full OODS + Merkle + FRI + PoW (trustless)
 - **Network:** Starknet Sepolia
 - **Felts:** ~942 per proof
