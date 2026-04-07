@@ -38,7 +38,7 @@ Create a prover client instance.
 
 ```typescript
 const client = createProverClient({
-  url: "https://api.obelysk.xyz",  // default; or your own GPU prover
+  url: "https://api.bitsage.network",  // default; or your own GPU prover
   apiKey: "your-api-key",           // optional, for rate limiting
   timeout: 300_000,                 // request timeout in ms (default: 5 min)
 });
