@@ -40,6 +40,7 @@
  */
 
 export { AgentFirewallSDK } from "./client";
+export { PolicyEnforcer, createPolicyEnforcer } from "./middleware";
 export type {
   FirewallConfig,
   TransactionFeatures,
@@ -50,3 +51,7 @@ export type {
   ResolveResult,
   EvaluateActionResult,
 } from "./types";
+export type {
+  PolicyEnforcerConfig,
+  ActionCheck,
+} from "./middleware";

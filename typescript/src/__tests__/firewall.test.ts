@@ -259,6 +259,150 @@ describe("Type Validation", () => {
 });
 
 // =============================================================================
+// PolicyEnforcer Tests
+// =============================================================================
+
+import { PolicyEnforcer, createPolicyEnforcer } from "../firewall/middleware";
+
+describe("PolicyEnforcer — Unit Tests", () => {
+  it("should create via factory function", () => {
+    const enforcer = createPolicyEnforcer({ proverUrl: "http://localhost:8080" });
+    expect(enforcer).toBeInstanceOf(PolicyEnforcer);
+  });
+
+  it("should extract target from starkli invoke command", () => {
+    const enforcer = createPolicyEnforcer({ proverUrl: "http://x" });
+    const target = enforcer.extractTarget(
+      "starkli invoke 0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7 transfer"
+    );
+    expect(target).toBe("0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7");
+  });
+
+  it("should extract target from sncast invoke command", () => {
+    const enforcer = createPolicyEnforcer({ proverUrl: "http://x" });
+    const target = enforcer.extractTarget("sncast invoke --contract 0xABCDEF1234567890");
+    expect(target).toBe("0xABCDEF1234567890");
+  });
+
+  it("should return null for non-transaction commands", () => {
+    const enforcer = createPolicyEnforcer({ proverUrl: "http://x" });
+    expect(enforcer.extractTarget("ls -la")).toBeNull();
+    expect(enforcer.extractTarget("git status")).toBeNull();
+    expect(enforcer.extractTarget("npm install")).toBeNull();
+  });
+
+  it("should return MCP server config", () => {
+    const enforcer = createPolicyEnforcer({
+      proverUrl: "http://prover:8080",
+      rpcUrl: "https://rpc.example.com",
+      firewallContract: "0xFW",
+      verifierContract: "0xVF",
+      apiKey: "key123",
+    });
+    const config = enforcer.getMcpServerConfig();
+    const server = config["obelyzk-policy"] as Record<string, unknown>;
+    expect(server.command).toBe("npx");
+    const env = server.env as Record<string, string>;
+    expect(env.PROVER_URL).toBe("http://prover:8080");
+    expect(env.STARKNET_RPC).toBe("https://rpc.example.com");
+    expect(env.FIREWALL_CONTRACT).toBe("0xFW");
+    expect(env.PROVER_API_KEY).toBe("key123");
+  });
+
+  it("should return allowed tools list", () => {
+    const enforcer = createPolicyEnforcer({ proverUrl: "http://x" });
+    const tools = enforcer.getAllowedTools();
+    expect(tools).toContain("Read");
+    expect(tools).toContain("Bash");
+    expect(tools).toContain("mcp__obelyzk-policy__obelyzk_classify");
+    expect(tools).toContain("mcp__obelyzk-policy__obelyzk_submit_action");
+    expect(tools.length).toBeGreaterThan(10);
+  });
+
+  it("should build canUseTool that allows policy tools", async () => {
+    const enforcer = createPolicyEnforcer({ proverUrl: "http://x" });
+    const canUseTool = enforcer.buildCanUseTool();
+
+    const result = await canUseTool(
+      "mcp__obelyzk-policy__obelyzk_classify",
+      { target: "0x1" }
+    );
+    expect(result.approved).toBe(true);
+  });
+
+  it("should build canUseTool that blocks unknown tools", async () => {
+    const enforcer = createPolicyEnforcer({ proverUrl: "http://x" });
+    const canUseTool = enforcer.buildCanUseTool();
+
+    const result = await canUseTool("SomeDangerousTool", {});
+    expect(result.approved).toBe(false);
+    expect(result.reason).toContain("not in allowlist");
+  });
+
+  it("should check action and return structured decision", async () => {
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = vi.fn().mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        request_id: "x",
+        decision: "block",
+        threat_score: 85000,
+        scores: [5000, 10000, 85000],
+        io_commitment: "0xabc",
+        policy_commitment: "0xdef",
+        prove_time_ms: 500,
+      }),
+    } as any);
+
+    try {
+      const enforcer = createPolicyEnforcer({ proverUrl: "http://mock:8080" });
+      const check = await enforcer.checkAction({ target: "0xdead" });
+
+      expect(check.allowed).toBe(false);
+      expect(check.decision).toBe("block");
+      expect(check.threatScore).toBe(85000);
+      expect(check.reason).toContain("Blocked");
+      expect(check.ioCommitment).toBe("0xabc");
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it("should approve safe actions", async () => {
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = vi.fn().mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        request_id: "x",
+        decision: "approve",
+        threat_score: 5000,
+        scores: [90000, 5000, 5000],
+        io_commitment: "0x1",
+        policy_commitment: "0x2",
+        prove_time_ms: 200,
+      }),
+    } as any);
+
+    try {
+      const enforcer = createPolicyEnforcer({ proverUrl: "http://mock:8080" });
+      const check = await enforcer.checkAction({ target: "0x1234" });
+
+      expect(check.allowed).toBe(true);
+      expect(check.decision).toBe("approve");
+      expect(check.reason).toContain("Approved");
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it("should expose underlying SDK", () => {
+    const enforcer = createPolicyEnforcer({ proverUrl: "http://x" });
+    const sdk = enforcer.getSDK();
+    expect(sdk).toBeInstanceOf(AgentFirewallSDK);
+  });
+});
+
+// =============================================================================
 // Integration Tests (against live prove-server)
 // =============================================================================
 
