@@ -154,13 +154,11 @@ export {
   // STWO GPU Prover
   StwoProverClient,
   createStwoProverClient,
+  createStwoProverClient as createProverClient,
   DEFAULT_PROVER_CONFIG,
   PROOF_TYPES,
   GPU_TIERS,
 } from './modules';
-
-// Primary prover API — alias for createStwoProverClient
-export const createProverClient = createStwoProverClient;
 
 // Agent Firewall (ZKML guardrails)
 export { AgentFirewallSDK } from './firewall';
