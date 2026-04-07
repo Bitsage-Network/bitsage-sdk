@@ -159,6 +159,9 @@ export {
   GPU_TIERS,
 } from './modules';
 
+// Primary prover API — alias for createStwoProverClient
+export const createProverClient = createStwoProverClient;
+
 // Agent Firewall (ZKML guardrails)
 export { AgentFirewallSDK } from './firewall';
 export type {

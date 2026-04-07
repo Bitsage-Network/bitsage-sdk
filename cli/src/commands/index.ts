@@ -15,3 +15,6 @@ export { createTrainCommand } from './train.js';
 export { createInferCommand } from './infer.js';
 export { createConnectCommand } from './connect.js';
 export { createShellCommand } from './shell.js';
+export { proveCommand } from './prove.js';
+export { modelsCommand } from './models.js';
+export { submitCommand } from './submit.js';

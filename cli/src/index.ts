@@ -22,6 +22,9 @@ import {
   createShellCommand,
   createStartCommand,
   createStopCommand,
+  proveCommand,
+  modelsCommand,
+  submitCommand,
 } from './commands/index.js';
 import { ensureConfigDir } from './lib/config.js';
 
@@ -88,6 +91,11 @@ async function main() {
   program.addCommand(createTrainCommand());
   program.addCommand(createInferCommand());
   program.addCommand(createConnectCommand());
+
+  // ── ObelyZK Proving Commands ────────────────────────────────────────
+  program.addCommand(proveCommand);
+  program.addCommand(modelsCommand);
+  program.addCommand(submitCommand);
 
   // ── Setup & Management ───────────────────────────────────────────────
   program.addCommand(createInitCommand());
