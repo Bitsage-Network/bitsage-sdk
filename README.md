@@ -75,6 +75,27 @@ obelysk models
 
 See the full [CLI README](./cli/README.md) for all commands and flags.
 
+### No SDK (curl)
+
+If you prefer raw HTTP, the hosted API works with plain `curl`. No SDK installation needed.
+
+```bash
+# Health check (no auth)
+curl https://api.bitsage.network/health
+
+# Prove a model
+curl -X POST https://api.bitsage.network/api/v1/infer \
+  -H "Authorization: Bearer $OBELYSK_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"model_id":"smollm2-135m","input":[1.0,2.0,3.0],"gpu":true}'
+
+# Check on-chain verification
+starkli call 0x1c208a5fe731c0d03b098b524f274c537587ea1d43d903838cc4a2bf90c40c7 \
+  get_recursive_verification_count 0x7214ee0e9c30e3e6748651d42f941c4b875a5b0a549223f92471a58585c980
+```
+
+Auth: `Authorization: Bearer <API_KEY>` header on every request. Set `OBELYSK_API_KEY` in your environment.
+
 ## How It Works
 
 1. Your SDK call hits the hosted GPU prover at `https://api.bitsage.network`
