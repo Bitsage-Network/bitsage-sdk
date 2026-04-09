@@ -226,11 +226,11 @@ print(f"Verification count: {result[0]}")
 client = ObelyzkClient(url="http://your-gpu:8080")
 ```
 
-See the [Self-Hosting Guide](../../libs/stwo-ml/scripts/pipeline/GETTING_STARTED.md) for GPU setup.
+See the [Self-Hosting Guide](../../libs/obelyzk.rs/scripts/pipeline/GETTING_STARTED.md) for GPU setup.
 
 ## Links
 
-- [GitHub](https://github.com/obelyzk/stwo-ml)
+- [GitHub](https://github.com/Bitsage-Network/obelyzk.rs)
 - [PyPI](https://pypi.org/project/obelyzk/)
 - [TypeScript SDK](../typescript/README.md)
 - [CLI](../cli/README.md)

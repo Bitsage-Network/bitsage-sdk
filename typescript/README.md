@@ -176,11 +176,11 @@ const client = createProverClient({
 });
 ```
 
-See the [Self-Hosting Guide](../../libs/stwo-ml/scripts/pipeline/GETTING_STARTED.md#option-3-self-host-a-gpu-prover) for setup instructions.
+See the [Self-Hosting Guide](../../libs/obelyzk.rs/scripts/pipeline/GETTING_STARTED.md#option-3-self-host-a-gpu-prover) for setup instructions.
 
 ## Links
 
-- [GitHub](https://github.com/obelyzk/stwo-ml)
+- [GitHub](https://github.com/Bitsage-Network/obelyzk.rs)
 - [npm](https://www.npmjs.com/package/@obelyzk/sdk)
-- [Getting Started](../../libs/stwo-ml/scripts/pipeline/GETTING_STARTED.md)
-- [On-Chain Docs](../../libs/stwo-ml/docs/ON_CHAIN_VERIFICATION.md)
+- [Getting Started](../../libs/obelyzk.rs/scripts/pipeline/GETTING_STARTED.md)
+- [On-Chain Docs](../../libs/obelyzk.rs/docs/ON_CHAIN_VERIFICATION.md)

@@ -11,7 +11,7 @@ All proofs use full OODS + Merkle + FRI + PoW (trustless) verification on Starkn
 npm install -g @obelyzk/cli
 
 # Or one-liner
-curl -sSf https://raw.githubusercontent.com/obelyzk/stwo-ml/main/install.sh | sh
+curl -sSf https://raw.githubusercontent.com/Bitsage-Network/obelyzk.rs/main/install.sh | sh
 ```
 
 ## Quick Start
@@ -192,8 +192,8 @@ When `--on-chain` is set, the proof is verified by the ObelyZK Recursive Verifie
 
 ## Links
 
-- [GitHub](https://github.com/obelyzk/stwo-ml)
+- [GitHub](https://github.com/Bitsage-Network/obelyzk.rs)
 - [npm](https://www.npmjs.com/package/@obelyzk/cli)
 - [TypeScript SDK](../typescript/README.md)
 - [Python SDK](../python/README.md)
-- [Getting Started](../../libs/stwo-ml/scripts/pipeline/GETTING_STARTED.md)
+- [Getting Started](../../libs/obelyzk.rs/scripts/pipeline/GETTING_STARTED.md)
