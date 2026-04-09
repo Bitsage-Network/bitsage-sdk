@@ -33,11 +33,12 @@ export const proveCommand = new Command('prove')
       console.log(`GPU: ${opts.gpu}, Recursive: ${opts.recursive}, On-chain: ${opts.onChain}`);
     }
 
-    const endpoint = opts.onChain ? '/api/v1/attest' : '/api/v1/prove';
+    const endpoint = opts.onChain ? '/api/v1/attest' : '/api/v1/infer';
     const body = {
       model_id: model,
       input,
       gpu: opts.gpu,
+      include_output: true,
       ...(opts.onChain ? { submit_onchain: true, recursive: opts.recursive } : {}),
     };
 
