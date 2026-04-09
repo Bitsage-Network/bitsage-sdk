@@ -60,6 +60,39 @@ class ZkmlProveResult(BaseModel):
     tee_attestation_hash: Optional[str] = None
 
 
+class ZkmlChatResult(BaseModel):
+    """Result from the /api/v1/chat endpoint — provable text inference."""
+    proof_id: str
+    token_ids: List[int]
+    num_tokens: int
+    output: Optional[List[float]] = None
+    output_shape: List[int] = Field(default_factory=list)
+    predicted_token_id: Optional[int] = None
+    predicted_text: Optional[str] = None
+    io_commitment: str
+    weight_commitment: str
+    proof_hash: str
+    prove_time_ms: int = 0
+    calldata_size: int = 0
+    calldata: Optional[List[str]] = None
+
+
+class ZkmlInferResult(BaseModel):
+    """Result from the /api/v1/infer endpoint — provable numeric inference."""
+    proof_id: str
+    output: Optional[List[float]] = None
+    output_shape: List[int] = Field(default_factory=list)
+    io_commitment: str
+    weight_commitment: str
+    proof_hash: str
+    verify_url: str = ""
+    num_proven_layers: int = 0
+    prove_time_ms: int = 0
+    estimated_gas: int = 0
+    calldata: Optional[List[str]] = None
+    calldata_size: int = 0
+
+
 class ZkmlHealthResponse(BaseModel):
     """Health check response from the prover server.
 

@@ -17,6 +17,12 @@ from obelyzk import ObelyzkClient
 
 client = ObelyzkClient()
 
+# Prove from a text prompt — server tokenizes automatically
+result = client.chat("smollm2-135m", "Hello world")
+print(f"Predicted: {result.predicted_text}")
+print(f"Proof: {result.proof_id}")
+print(f"Time: {result.prove_time_ms}ms")
+
 # Prove and verify on-chain
 result = client.prove(
     model="smollm2-135m",
@@ -44,9 +50,31 @@ client = ObelyzkClient(url="http://your-gpu:8080")
 client = ObelyzkClient(api_key="your-key")
 ```
 
+### `client.chat(model, prompt, gpu?, include_calldata?)`
+
+Prove a model from a text prompt. The server tokenizes, embeds, and predicts the next token.
+
+```python
+result = client.chat(
+    "smollm2-135m",             # model name
+    "What is zero knowledge?",  # text prompt
+    gpu=True,                    # GPU acceleration (default: True)
+)
+
+# result.proof_id           -> str           unique proof identifier
+# result.token_ids          -> list[int]     tokenized input IDs
+# result.num_tokens         -> int           number of tokens
+# result.predicted_token_id -> int | None    argmax of lm_head projection
+# result.predicted_text     -> str | None    decoded next token
+# result.io_commitment      -> str           Poseidon(input || output)
+# result.proof_hash         -> str           proof identifier hash
+# result.prove_time_ms      -> int           proving time (~96s on A10G)
+# result.calldata_size      -> int           GKR proof size in felts
+```
+
 ### `client.prove(model, input, on_chain?, recursive?)`
 
-Prove a model execution.
+Prove a model execution from raw input.
 
 ```python
 result = client.prove(
@@ -60,10 +88,27 @@ result = client.prove(
 # result.proof_hash      -> str           Poseidon hash
 # result.tx_hash         -> str | None    Starknet TX (if on_chain)
 # result.verified        -> bool | None   on-chain status
-# result.prove_time      -> float         seconds (~102s for SmolLM2)
+# result.prove_time      -> float         seconds (~96s for SmolLM2)
 # result.recursive_time  -> float         seconds (~3.55s)
 # result.felts           -> int           calldata size (~942)
 # result.model_id        -> str           hex identifier
+```
+
+### `client.infer(model, prompt?, input?, include_output?)`
+
+Synchronous provable inference. Accepts either text prompt or raw f32 input.
+
+```python
+# From text
+result = client.infer("smollm2-135m", prompt="Hello world")
+
+# From raw input
+result = client.infer("smollm2-135m", input=[1.0, 2.0, 3.0])
+
+# result.proof_id          -> str
+# result.output             -> list[float] | None
+# result.io_commitment      -> str
+# result.prove_time_ms      -> int
 ```
 
 ### `client.attest(model, input, submit_on_chain?)`

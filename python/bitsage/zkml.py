@@ -14,7 +14,9 @@ import httpx
 
 from bitsage.client import SdkError
 from bitsage.zkml_types import (
+    ZkmlChatResult,
     ZkmlHealthResponse,
+    ZkmlInferResult,
     ZkmlJobStatus,
     ZkmlModelInfo,
     ZkmlProveRequest,
@@ -171,6 +173,67 @@ class ZkmlProverClient:
             await asyncio.sleep(poll_interval)
 
         raise SdkError("Timeout waiting for proving job", "TIMEOUT")
+
+    async def chat(
+        self,
+        model_id: str,
+        prompt: str,
+        *,
+        include_calldata: bool = False,
+        gpu: bool = True,
+    ) -> ZkmlChatResult:
+        """Prove ML inference on a text prompt.
+
+        The server tokenizes the prompt, embeds it, runs the forward pass
+        with a GKR proof, and returns the predicted next token.
+
+        Example::
+
+            async with ZkmlProverClient("https://api.bitsage.network", api_key="...") as c:
+                r = await c.chat("smollm2-135m", "Hello world")
+                print(r.predicted_text)  # predicted next token
+                print(r.proof_id)        # proof identifier
+        """
+        data = await self._request("POST", "/api/v1/chat", json={
+            "model_id": model_id,
+            "prompt": prompt,
+            "include_calldata": include_calldata,
+            "gpu": gpu,
+        })
+        return ZkmlChatResult(**data)
+
+    async def infer_sync(
+        self,
+        model_id: str,
+        *,
+        input: Optional[list[float]] = None,
+        prompt: Optional[str] = None,
+        include_calldata: bool = False,
+        include_output: bool = True,
+        gpu: bool = True,
+    ) -> ZkmlInferResult:
+        """Synchronous provable inference (blocks until proof is ready).
+
+        Provide either ``input`` (raw f32 array) or ``prompt`` (text).
+
+        Example::
+
+            r = await c.infer_sync("smollm2-135m", prompt="Hello world")
+            print(r.output)          # model output
+            print(r.io_commitment)   # proof binding
+        """
+        body: dict = {
+            "model_id": model_id,
+            "include_calldata": include_calldata,
+            "include_output": include_output,
+            "gpu": gpu,
+        }
+        if input is not None:
+            body["input"] = input
+        if prompt is not None:
+            body["prompt"] = prompt
+        data = await self._request("POST", "/api/v1/infer", json=body)
+        return ZkmlInferResult(**data)
 
     async def _request(
         self,

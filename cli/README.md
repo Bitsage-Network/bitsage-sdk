@@ -17,11 +17,14 @@ curl -sSf https://raw.githubusercontent.com/obelyzk/stwo-ml/main/install.sh | sh
 ## Quick Start
 
 ```bash
-# Prove a model
-obelysk prove --model smollm2-135m --input "Hello world"
+# Prove from a text prompt — server tokenizes automatically
+obelysk prove smollm2-135m --prompt "Hello world"
+
+# Prove from raw JSON input
+obelysk prove smollm2-135m --input "[1.0, 2.0, 3.0]"
 
 # Prove and verify on-chain
-obelysk prove --model smollm2-135m --input "Hello world" --on-chain
+obelysk prove smollm2-135m --prompt "Hello world" --on-chain
 
 # List available models
 obelysk models
@@ -34,12 +37,18 @@ obelysk models --download smollm2-135m
 
 ### `obelysk prove`
 
-Prove a model execution. Uses the hosted GPU prover by default.
+Prove a model execution. Uses the hosted GPU prover by default. Accepts text prompts (tokenized server-side) or raw f32 arrays.
 
 ```bash
-obelysk prove \
-  --model smollm2-135m \
-  --input "Your input text" \
+# Text prompt (recommended)
+obelysk prove smollm2-135m --prompt "What is zero knowledge?"
+
+# Raw input
+obelysk prove smollm2-135m --input "[1.0, 2.0, 3.0]"
+
+# Full options
+obelysk prove smollm2-135m \
+  --prompt "Hello world" \
   --on-chain \
   --recursive \
   --output proof.json
@@ -47,14 +56,28 @@ obelysk prove \
 
 | Flag | Description | Default |
 |------|-------------|---------|
-| `--model` | Model name or HuggingFace ID | (required) |
-| `--input` | Input text or JSON array | (required) |
+| `<model>` | Model name or ID (positional) | (required) |
+| `--prompt` | Text prompt (tokenized server-side) | -- |
+| `--input` | Raw f32 JSON array | -- |
+| `--input-file` | Read input from JSON file | -- |
 | `--on-chain` | Submit to Starknet | false |
 | `--recursive` | Use recursive STARK (1 TX) | true |
+| `--gpu` | Use GPU acceleration | true |
 | `--output` | Save proof to file | stdout |
 | `--prover-url` | Custom prover URL | `https://api.bitsage.network` |
-| `--network` | Starknet network | sepolia |
 | `--quiet` | Suppress progress output | false |
+
+When `--prompt` is used, the server tokenizes the text, extracts the embedding, and returns the predicted next token alongside the proof:
+
+```
+=== Proof Result ===
+Proof ID:      proof-174605e2-...
+Tokens:        2 (IDs: 19556, 905)
+Predicted:     "the"
+IO Commitment: 0x312c67eb...
+Prove time:    95523ms
+Calldata:      46148 felts
+```
 
 ### `obelysk submit`
 
