@@ -694,6 +694,74 @@ export class StwoProverClient {
   /**
    * Generate proof for AI/ML inference
    */
+  /**
+   * Verifiable chat inference — send a prompt, get a response with on-chain proof.
+   *
+   * @example
+   * ```typescript
+   * const result = await prover.chat("What is 2+2?", { model: "local", maxTokens: 1 });
+   * console.log(result.text);           // model output
+   * console.log(result.txHash);         // Starknet TX hash
+   * console.log(result.explorerUrl);    // Starkscan link
+   * console.log(result.calldataFelts);  // ~950 felts
+   * console.log(result.modelId);        // weight commitment hash
+   * ```
+   */
+  async chat(
+    prompt: string,
+    options?: {
+      model?: string;
+      maxTokens?: number;
+      sessionId?: string;
+    }
+  ): Promise<{
+    text: string;
+    txHash?: string;
+    proofHash?: string;
+    modelId?: string;
+    ioCommitment?: string;
+    calldataFelts?: number;
+    explorerUrl?: string;
+    proveTimeSecs?: number;
+    trustModel: string;
+  }> {
+    const response = await fetch(`${this.config.baseUrl}/v1/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(this.config.apiKey ? { Authorization: `Bearer ${this.config.apiKey}` } : {}),
+      },
+      body: JSON.stringify({
+        model: options?.model ?? 'local',
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: options?.maxTokens ?? 1,
+        stream: false,
+        session_id: options?.sessionId,
+      }),
+    });
+
+    if (!response.ok) {
+      const err = await response.text();
+      throw new Error(`Chat failed (${response.status}): ${err}`);
+    }
+
+    const data = await response.json();
+    const choice = data.choices?.[0];
+    const meta = data.obelyzk ?? {};
+
+    return {
+      text: choice?.message?.content ?? '',
+      txHash: meta.tx_hash,
+      proofHash: meta.proof_hash,
+      modelId: meta.model_id,
+      ioCommitment: meta.io_commitment,
+      calldataFelts: meta.calldata_felts,
+      explorerUrl: meta.explorer_url,
+      proveTimeSecs: meta.prove_time_secs,
+      trustModel: meta.trust_model ?? 'unknown',
+    };
+  }
+
   async proveInference(
     modelId: string,
     inputs: bigint[],
