@@ -1,6 +1,6 @@
 {
   "name": "@obelyzk/sdk",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "description": "ObelyZK SDK — verifiable ML inference on Starknet with recursive STARK proofs",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
