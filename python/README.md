@@ -1,10 +1,56 @@
-# obelyzk
+# obelyzk / bitsage
 
-Python SDK for ObelyZK -- verifiable ML inference on Starknet.
+Python SDK for **verifiable serverless compute on Starknet**.
 
-All proofs use full OODS + Merkle + FRI + PoW (trustless) verification on Starknet Sepolia.
+- **BitSage 0.3** — Modal/FAL-shaped decorator API: `@app.function(tier="gpu_h100", require_proof=True)` with `.remote()`, image build DSL, and on-chain proof receipts. See [`examples/`](./examples/) for a 60-second getting-started tour.
+- **ObelyZK** — the original high-level verifiable-ML inference client: `client.chat(...)` / `client.prove(...)` with full OODS + Merkle + FRI + PoW verification on Starknet Sepolia. Still supported; not deprecated.
 
-## Installation
+Both surfaces live in the same package. Pick the one that matches your workload:
+
+| Your workload | Use |
+|---|---|
+| Generic Python + `require_proof=True` (Modal competitor) | `bitsage.App`, `@app.function`, `.remote()` |
+| Hosted LLM / CV model inference (FAL.ai competitor) | `bitsage.infer(...)` *(legacy high-level)* |
+| Prove-and-verify a pre-built ML model | `obelyzk.ObelyzkClient.prove(...)` |
+
+## Quick start (BitSage 0.3 decorator API)
+
+```bash
+pip install obelyzk        # package name is still obelyzk
+bitsage setup              # store your API key
+```
+
+```python
+import bitsage
+
+app = bitsage.App("demo")
+
+@app.function(
+    tier="gpu_h100",
+    require_proof=True,                                  # ← the moat
+    image=bitsage.Image.debian_slim().pip_install("numpy"),
+)
+def square(x: int) -> int:
+    return x * x
+
+result = await square.remote(7)
+print(result.value)                 # 49
+print(result.proof.on_chain_url)    # explorer URL for the verifier tx
+await result.proof.verify()         # re-checks on Starknet
+```
+
+Or drive it from the CLI:
+
+```bash
+bitsage run examples/03_verifiable_compute.py::compute_with_proof \
+    --inputs-json '{"x": 42}'
+```
+
+See [`examples/README.md`](./examples/README.md) for the full Modal → BitSage porting matrix.
+
+---
+
+## Legacy ObelyZK quick start
 
 ```bash
 pip install obelyzk

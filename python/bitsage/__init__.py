@@ -25,6 +25,30 @@ Full Client:
 
 from bitsage.client import BitSageClient, ClientConfig, WalletConfig
 from bitsage.zkml import ZkmlProverClient, ZkmlVerifierClient
+
+# Modal/FAL-shaped decorator API (SDK 0.3)
+from bitsage.app import (
+    App,
+    ExecutionResult,
+    Function,
+    FunctionCall,
+    FunctionConfig,
+    UsageReport,
+)
+from bitsage.image import Image, ImageLayer
+from bitsage.proof import ProofReceipt, ProofVerificationError
+from bitsage.service_tier import ServiceTier
+from bitsage._transport import (
+    AuthenticationError,
+    BadRequestError,
+    BitSageHttpError,
+    BitSageServerError,
+    CostCapExceededError,
+    HandlerTimeoutError,
+    NotFoundError,
+    RemoteExecutionError,
+    ServiceUnavailableError,
+)
 from bitsage.zkml_types import (
     ZkmlJobStatus,
     ZkmlModelInfo,
@@ -67,8 +91,30 @@ from bitsage.easy import (
     JobHandle,
 )
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 __all__ = [
+    # Decorator API (Modal/FAL-shaped, SDK 0.3)
+    "App",
+    "ExecutionResult",
+    "Function",
+    "FunctionCall",
+    "FunctionConfig",
+    "Image",
+    "ImageLayer",
+    "ProofReceipt",
+    "ProofVerificationError",
+    "ServiceTier",
+    "UsageReport",
+    # HTTP error hierarchy
+    "AuthenticationError",
+    "BadRequestError",
+    "BitSageHttpError",
+    "BitSageServerError",
+    "CostCapExceededError",
+    "HandlerTimeoutError",
+    "NotFoundError",
+    "RemoteExecutionError",
+    "ServiceUnavailableError",
     # Easy API (top-level convenience)
     "login",
     "train",

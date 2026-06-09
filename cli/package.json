@@ -1,6 +1,6 @@
 {
   "name": "@obelyzk/cli",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "ObelyZK CLI — prove ML models and verify on Starknet from your terminal",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

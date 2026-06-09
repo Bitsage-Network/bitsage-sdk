@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "obelyzk"
 version = "0.3.0"
-description = "ObelyZK SDK — verifiable ML inference on Starknet with recursive STARK proofs"
+description = "ObelyZK / BitSage SDK — verifiable serverless compute on Starknet with recursive STARK proofs"
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.9"
@@ -37,6 +37,9 @@ dev = [
     "ruff>=0.1.0",
     "mypy>=1.0.0",
 ]
+
+[project.scripts]
+bitsage = "bitsage.cli:main"
 
 [project.urls]
 Homepage = "https://obelysk.xyz"

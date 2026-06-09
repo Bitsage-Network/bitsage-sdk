@@ -58,9 +58,10 @@ export function createShellCommand(): Command {
         const coordinatorUrl = getCoordinatorUrl();
         const authHeaders = getAuthHeaders();
 
-        // SSH gateway is routed through the same domain via ALB path rules
-        // Override with BITSAGE_SSH_GATEWAY_URL for local dev
-        const gatewayUrl = process.env.BITSAGE_SSH_GATEWAY_URL || coordinatorUrl;
+        // SSH gateway runs on port 8090 alongside the coordinator on 8080.
+        // Override with BITSAGE_SSH_GATEWAY_URL for custom deployments.
+        const gatewayUrl = process.env.BITSAGE_SSH_GATEWAY_URL
+          || coordinatorUrl.replace(/:8080\b/, ':8090');
 
         // List mode
         if (options.list) {
